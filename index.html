@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        #tooltip{z-index:100;white-space:pre-wrap;max-width:250px}#tracker-grid{display:grid;grid-template-columns:150px repeat(14,1fr);gap:1px;background-color:#e5e7eb}.grid-header,.athlete-name,.status-box{padding:.75rem;text-align:center;background-color:#fff}.grid-header{background-color:#f3f4f6;font-weight:600;color:#374151;font-size:.8rem;position:sticky;top:0;z-index:10}.athlete-name{font-weight:500;text-align:left;position:sticky;left:0;z-index:5}.status-box{width:100%;height:50px;border-radius:4px;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.status-box:hover{transform:scale(1.05);box-shadow:0 4px 8px rgba(0,0,0,.1)}#edit-modal.hidden{display:none}#edit-modal{display:flex}
+        #tooltip{z-index:100;white-space:pre-wrap;max-width:250px}#tracker-grid{display:grid;grid-template-columns:150px repeat(14,1fr);gap:1px;background-color:#e5e7eb}.grid-header,.athlete-name,.status-box{padding:.75rem;text-align:center;background-color:#fff}.grid-header{background-color:#f3f4f6;font-weight:600;color:#374151;font-size:.8rem;position:sticky;top:0;z-index:10}.athlete-name{font-weight:500;text-align:left;position:sticky;left:0;z-index:5}.status-box{width:100%;height:50px;border-radius:4px;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.status-box:hover{transform:scale(1.05);box-shadow:0 4px 8px rgba(0,0,0,.1)}#edit-modal.hidden{display:none}#edit-modal{display:flex} button:disabled{opacity:0.5;cursor:not-allowed;}
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -66,6 +66,7 @@
         let appData = {};
         let injuryLog = {};
         let currentEndDate = new Date();
+        const seasonStartDate = new Date('2025-01-01T00:00:00'); // The earliest date to show data for
 
         // --- INITIALIZATION ---
         async function initializeApp() {
@@ -129,7 +130,6 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
                     body: JSON.stringify({ key, ...data })
                 });
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                // After saving, re-fetch all data to ensure consistency
                 await fetchInjuryLog();
             } catch (error) {
                 console.error("Error saving injury update:", error);
@@ -146,13 +146,25 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
                 return date;
             });
 
-            dateRangeEl.textContent = `${formatDateDisplay(dates[0])} - ${formatDateDisplay(currentEndDate)}`;
+            const startDate = dates[0];
+            dateRangeEl.textContent = `${formatDateDisplay(startDate)} - ${formatDateDisplay(currentEndDate)}`;
+            
+            // Disable the "Prev" button if scrolling back would pass the season start date
+            const prevDateLimit = new Date(startDate);
+            prevDateLimit.setDate(prevDateLimit.getDate() - 1);
+            prevWeekBtn.disabled = prevDateLimit < seasonStartDate;
+
             trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10">Athlete</div>`;
             dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
 
             appData.athletes.forEach(athlete => {
                 trackerGrid.innerHTML += `<div class="athlete-name">${athlete}</div>`;
                 dates.forEach(date => {
+                    // Don't render cells for dates before the season starts
+                    if (date < seasonStartDate) {
+                        trackerGrid.innerHTML += `<div class="status-box-container p-1"><div class="status-box" style="background-color: #f3f4f6; cursor: default;"></div></div>`;
+                        return;
+                    }
                     const statusData = getStatusForDate(athlete, date);
                     const color = appData.colorMap[statusData.status] || '#cccccc';
                     trackerGrid.innerHTML += `
@@ -177,7 +189,7 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
             if (displayDay > today) {
                 const tomorrow = new Date(today);
                 tomorrow.setDate(today.getDate() + 1);
-                const isAfterCutoff = now.getHours() >= 23 && now.getMinutes() >= 30;
+                const isAfterCutoff = now.getHours() > 23 || (now.getHours() === 23 && now.getMinutes() >= 30);
                 if (!(displayDay.getTime() === tomorrow.getTime() && isAfterCutoff)) {
                     return { status: 'Pending' };
                 }
@@ -187,7 +199,8 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
             if (injuryLog[key]) return injuryLog[key];
 
             let previousDate = new Date(dateToDisplay);
-            for (let i = 0; i < 365; i++) {
+            // Look back for previous status, but stop if we go before the season start date
+            while (previousDate > seasonStartDate) {
                 previousDate.setDate(previousDate.getDate() - 1);
                 const prevKey = `${athlete}-${toYYYYMMDD(previousDate)}`;
                 if (injuryLog[prevKey]) return { ...injuryLog[prevKey] };
@@ -215,6 +228,7 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
 
         function handleBoxDoubleClick(e) {
             const box = e.target;
+            if (!box.dataset.status) return; // Ignore empty boxes before season start
             const statusData = JSON.parse(box.dataset.status);
             if (statusData.status === 'Pending') return;
 
@@ -250,6 +264,7 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
         }
 
         function handleMouseOver(e) {
+            if (!e.target.dataset.status) return;
             const statusData = JSON.parse(e.target.dataset.status);
             if (statusData.status && statusData.status !== 'Available' && statusData.status !== 'Pending') {
                 tooltip.textContent = `Status: ${statusData.status}\nInjury: ${statusData.injury || 'N/A'}\nSite: ${statusData.injurySite || 'N/A'}\nSeverity: ${statusData.severity || 'N/A'}\n\nComment: ${statusData.comment || 'None'}`;
