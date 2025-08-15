@@ -1,0 +1,19 @@
+﻿AthleteName,InjurySite,Injury,Severity,Status,ColourCode
+Nick Perry,Hamstring,Strain,Grade 1 (0 - 3 weeks),Available,Green
+Zach Taiba,Calf,Sprain,Grade 2 (3 - 6 weeks),Modified - Match Ready,Blue
+Riley Martin,Shoulder,Break,Grade 3 (6+ weeks),Modified - Training Only,Yellow
+Luke Major,Quad,Stress Fracture,Season,Modified Training,Orange
+Bailey Sims,Knee,Hot Spot,,Not Training,Red
+Lachlan Watt,Hip,Contusion,,Test to Play,Purple
+Lachlan McNamara,Ribs,Bleeding,,,
+Cruz Martin,Achilies,,,,
+,Abdominals,,,,
+,Face,,,,
+,Concussion,,,,
+,Foot,,,,
+,Hand,,,,
+,Ankle,,,,
+,Forearm,,,,
+,Humerous,,,,
+,Shank,,,,
+,Femur,,,,
