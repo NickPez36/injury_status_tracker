@@ -7,65 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom tooltip styling */
-        #tooltip {
-            z-index: 100;
-            white-space: pre-wrap; /* Allows for line breaks in the tooltip */
-            max-width: 250px;
-        }
-
-        /* Custom styles for the tracker grid for better layout control */
-        #tracker-grid {
-            display: grid;
-            grid-template-columns: 150px repeat(14, 1fr); /* Athlete name column + 14 day columns */
-            gap: 1px;
-            background-color: #e5e7eb; /* grid line color */
-        }
-
-        .grid-header, .athlete-name, .status-box {
-            padding: 0.75rem;
-            text-align: center;
-            background-color: white;
-        }
-
-        .grid-header {
-            background-color: #f3f4f6;
-            font-weight: 600;
-            color: #374151;
-            font-size: 0.8rem;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .athlete-name {
-            font-weight: 500;
-            text-align: left;
-            position: sticky;
-            left: 0;
-            z-index: 5;
-        }
-
-        .status-box {
-            width: 100%;
-            height: 50px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .status-box:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        /* Modal transition */
-        #edit-modal.hidden {
-            display: none;
-        }
-        #edit-modal {
-            display: flex;
-        }
+        #tooltip{z-index:100;white-space:pre-wrap;max-width:250px}#tracker-grid{display:grid;grid-template-columns:150px repeat(14,1fr);gap:1px;background-color:#e5e7eb}.grid-header,.athlete-name,.status-box{padding:.75rem;text-align:center;background-color:#fff}.grid-header{background-color:#f3f4f6;font-weight:600;color:#374151;font-size:.8rem;position:sticky;top:0;z-index:10}.athlete-name{font-weight:500;text-align:left;position:sticky;left:0;z-index:5}.status-box{width:100%;height:50px;border-radius:4px;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.status-box:hover{transform:scale(1.05);box-shadow:0 4px 8px rgba(0,0,0,.1)}#edit-modal.hidden{display:none}#edit-modal{display:flex}
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -94,36 +36,12 @@
             <form id="edit-form">
                 <input type="hidden" id="edit-athlete-name">
                 <input type="hidden" id="edit-date">
-
-                <div class="mb-4">
-                    <label for="injury-site" class="block text-sm font-medium text-gray-700 mb-1">Injury Site</label>
-                    <select id="injury-site" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select>
-                </div>
-
-                <div class="mb-4">
-                    <label for="injury" class="block text-sm font-medium text-gray-700 mb-1">Injury</label>
-                    <select id="injury" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select>
-                </div>
-
-                <div class="mb-4">
-                    <label for="severity" class="block text-sm font-medium text-gray-700 mb-1">Severity</label>
-                    <select id="severity" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select>
-                </div>
-
-                <div class="mb-4">
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select id="status" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select>
-                </div>
-
-                <div class="mb-6">
-                    <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Comment</label>
-                    <textarea id="comment" rows="3" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></textarea>
-                </div>
-
-                <div class="flex justify-end space-x-3">
-                    <button type="button" id="cancel-edit" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">Save Changes</button>
-                </div>
+                <div class="mb-4"><label for="injury-site" class="block text-sm font-medium text-gray-700 mb-1">Injury Site</label><select id="injury-site" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select></div>
+                <div class="mb-4"><label for="injury" class="block text-sm font-medium text-gray-700 mb-1">Injury</label><select id="injury" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select></div>
+                <div class="mb-4"><label for="severity" class="block text-sm font-medium text-gray-700 mb-1">Severity</label><select id="severity" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select></div>
+                <div class="mb-4"><label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label><select id="status" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select></div>
+                <div class="mb-6"><label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Comment</label><textarea id="comment" rows="3" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></textarea></div>
+                <div class="flex justify-end space-x-3"><button type="button" id="cancel-edit" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button><button type="submit" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">Save Changes</button></div>
             </form>
         </div>
     </div>
@@ -132,301 +50,241 @@
     <div id="tooltip" class="absolute bg-gray-900 text-white text-sm rounded-lg py-2 px-3 shadow-lg opacity-0 transition-opacity pointer-events-none"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM ELEMENTS ---
-            const trackerGrid = document.getElementById('tracker-grid');
-            const dateRangeEl = document.getElementById('date-range');
-            const prevWeekBtn = document.getElementById('prev-week');
-            const nextWeekBtn = document.getElementById('next-week');
-            const modal = document.getElementById('edit-modal');
-            const modalTitle = document.getElementById('modal-title');
-            const editForm = document.getElementById('edit-form');
-            const cancelBtn = document.getElementById('cancel-edit');
-            const tooltip = document.getElementById('tooltip');
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM ELEMENTS ---
+        const trackerGrid = document.getElementById('tracker-grid');
+        const dateRangeEl = document.getElementById('date-range');
+        const prevWeekBtn = document.getElementById('prev-week');
+        const nextWeekBtn = document.getElementById('next-week');
+        const modal = document.getElementById('edit-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const editForm = document.getElementById('edit-form');
+        const cancelBtn = document.getElementById('cancel-edit');
+        const tooltip = document.getElementById('tooltip');
 
-            // --- STATE MANAGEMENT ---
-            let appData = {
-                athletes: [],
-                injurySites: [],
-                injuries: [],
-                severities: [],
-                statuses: [],
-                colorMap: {}
-            };
-            let injuryLog = {}; // Stored as { 'athleteName-YYYY-MM-DD': data }
-            let currentEndDate = new Date();
+        // --- STATE MANAGEMENT ---
+        let appData = {};
+        let injuryLog = {};
+        let currentEndDate = new Date();
 
-            // --- INITIALIZATION ---
-            async function initializeApp() {
-                await loadCSVData();
-                loadInjuryLog();
+        // --- INITIALIZATION ---
+        async function initializeApp() {
+            loadConfigData();
+            await fetchInjuryLog();
+            setupEventListeners();
+        }
+
+        // --- DATA LOADING ---
+        function loadConfigData() {
+            const csvText = `AthleteName,InjurySite,Injury,Severity,Status,ColourCode
+Nick Pezzatta,Knee,ACL Tear,High,Out,#D32F2F
+John Smith,Ankle,Sprain,Medium,Modified,#FFC107
+Jane Doe,Shoulder,Dislocation,High,Out,#D32F2F
+Peter Jones,Back,Strain,Low,Modified,#FFC107
+Mary Williams,Foot,Fracture,High,Out,#D32F2F
+Chris Brown,Hamstring,Pull,Medium,Available,#4CAF50
+Sarah Miller,Groin,Strain,Low,Available,#4CAF50
+David Garcia,Head,Concussion,High,Out,#D32F2F
+-,,-,-,Pending,#E0E0E0`;
+
+            const lines = csvText.split('\n').filter(line => line.trim() !== '');
+            const headers = lines.shift().split(',').map(h => h.trim());
+            const data = lines.map(line => {
+                const values = line.split(',').map(v => v.trim());
+                let obj = {};
+                headers.forEach((header, i) => { obj[header] = values[i]; });
+                return obj;
+            });
+            
+            appData.athletes = [...new Set(data.map(item => item.AthleteName).filter(name => name !== '-'))].sort();
+            appData.injurySites = [...new Set(data.map(item => item.InjurySite).filter(site => site !== '-'))];
+            appData.injuries = [...new Set(data.map(item => item.Injury).filter(inj => inj !== '-'))];
+            appData.severities = [...new Set(data.map(item => item.Severity).filter(sev => sev !== '-'))];
+            appData.statuses = [...new Set(data.map(item => item.Status).filter(stat => stat !== '-'))];
+            appData.colorMap = data.reduce((acc, item) => {
+                if (item.Status && item.ColourCode) { acc[item.Status] = item.ColourCode; }
+                return acc;
+            }, {});
+        }
+
+        // --- NETLIFY FUNCTION INTEGRATION ---
+        async function fetchInjuryLog() {
+            try {
+                const response = await fetch('/.netlify/functions/injury-log');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                injuryLog = data;
                 renderGrid();
-                setupEventListeners();
+            } catch (error) {
+                console.error("Error fetching injury log:", error);
+                trackerGrid.innerHTML = `<p class="text-red-500 p-4 col-span-full">Could not load injury data. Please check the Netlify Function logs.</p>`;
             }
+        }
 
-            // --- DATA LOADING ---
-            async function loadCSVData() {
-                try {
-                    const response = await fetch('data/app_info.csv');
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const csvText = await response.text();
-                    parseCSV(csvText);
-                } catch (error) {
-                    console.error("Error loading or parsing CSV data:", error);
-                    trackerGrid.innerHTML = `<p class="text-red-500 p-4 col-span-full">Error: Could not load data/app_info.csv. Please make sure the file exists and is accessible.</p>`;
-                }
-            }
-
-            function parseCSV(text) {
-                const lines = text.split('\n').filter(line => line.trim() !== '');
-                const headers = lines.shift().split(',').map(h => h.trim());
-
-                const data = lines.map(line => {
-                    const values = line.split(',').map(v => v.trim());
-                    let obj = {};
-                    headers.forEach((header, i) => {
-                        obj[header] = values[i];
-                    });
-                    return obj;
+        async function saveInjuryUpdate(key, data) {
+            try {
+                const response = await fetch('/.netlify/functions/injury-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, ...data })
                 });
-                
-                // Process the parsed data
-                appData.athletes = [...new Set(data.map(item => item.AthleteName))].sort();
-                appData.injurySites = [...new Set(data.map(item => item.InjurySite))];
-                appData.injuries = [...new Set(data.map(item => item.Injury))];
-                appData.severities = [...new Set(data.map(item => item.Severity))];
-                appData.statuses = [...new Set(data.map(item => item.Status))];
-                appData.colorMap = data.reduce((acc, item) => {
-                    if (item.Status && item.ColourCode) {
-                        acc[item.Status] = item.ColourCode;
-                    }
-                    return acc;
-                }, {});
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                // After saving, re-fetch all data to ensure consistency
+                await fetchInjuryLog();
+            } catch (error) {
+                console.error("Error saving injury update:", error);
+                alert("Failed to save update. Please try again.");
             }
+        }
 
-            function loadInjuryLog() {
-                const storedLog = localStorage.getItem('injuryLog');
-                if (storedLog) {
-                    injuryLog = JSON.parse(storedLog);
-                }
-            }
+        // --- RENDERING ---
+        function renderGrid() {
+            trackerGrid.innerHTML = '';
+            const dates = Array.from({ length: 14 }, (_, i) => {
+                const date = new Date(currentEndDate);
+                date.setDate(date.getDate() - (13 - i));
+                return date;
+            });
 
-            function saveInjuryLog() {
-                localStorage.setItem('injuryLog', JSON.stringify(injuryLog));
-            }
+            dateRangeEl.textContent = `${formatDateDisplay(dates[0])} - ${formatDateDisplay(currentEndDate)}`;
+            trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10">Athlete</div>`;
+            dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
 
-            // --- RENDERING ---
-            function renderGrid() {
-                trackerGrid.innerHTML = ''; // Clear existing grid
-                
-                const dates = [];
-                for (let i = 13; i >= 0; i--) {
-                    let date = new Date(currentEndDate);
-                    date.setDate(date.getDate() - i);
-                    dates.push(date);
-                }
-
-                // Update date range display
-                const startDate = dates[0];
-                dateRangeEl.textContent = `${formatDateDisplay(startDate)} - ${formatDateDisplay(currentEndDate)}`;
-
-                // Create headers
-                trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10">Athlete</div>`;
+            appData.athletes.forEach(athlete => {
+                trackerGrid.innerHTML += `<div class="athlete-name">${athlete}</div>`;
                 dates.forEach(date => {
-                    trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`;
+                    const statusData = getStatusForDate(athlete, date);
+                    const color = appData.colorMap[statusData.status] || '#cccccc';
+                    trackerGrid.innerHTML += `
+                        <div class="status-box-container p-1">
+                             <div class="status-box" 
+                                  style="background-color: ${color};"
+                                  data-athlete="${athlete}" 
+                                  data-date="${toYYYYMMDD(date)}"
+                                  data-status='${JSON.stringify(statusData)}'>
+                             </div>
+                        </div>`;
                 });
+            });
+            addBoxEventListeners();
+        }
+        
+        function getStatusForDate(athlete, dateToDisplay) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const displayDay = new Date(dateToDisplay.getFullYear(), dateToDisplay.getMonth(), dateToDisplay.getDate());
 
-                // Create rows for each athlete
-                appData.athletes.forEach(athlete => {
-                    trackerGrid.innerHTML += `<div class="athlete-name">${athlete}</div>`;
-                    dates.forEach(date => {
-                        const dateString = toYYYYMMDD(date);
-                        const key = `${athlete}-${dateString}`;
-                        
-                        // Nightly update simulation: Carry forward status
-                        let statusData = getStatusForDate(athlete, date);
-
-                        const color = appData.colorMap[statusData.status] || '#cccccc'; // Default gray
-                        trackerGrid.innerHTML += `
-                            <div class="status-box-container p-1">
-                                 <div class="status-box" 
-                                      style="background-color: ${color};"
-                                      data-athlete="${athlete}" 
-                                      data-date="${dateString}"
-                                      data-status='${JSON.stringify(statusData)}'>
-                                 </div>
-                            </div>`;
-                    });
-                });
-                
-                addBoxEventListeners();
+            if (displayDay > today) {
+                const tomorrow = new Date(today);
+                tomorrow.setDate(today.getDate() + 1);
+                const isAfterCutoff = now.getHours() >= 23 && now.getMinutes() >= 30;
+                if (!(displayDay.getTime() === tomorrow.getTime() && isAfterCutoff)) {
+                    return { status: 'Pending' };
+                }
             }
+
+            const key = `${athlete}-${toYYYYMMDD(dateToDisplay)}`;
+            if (injuryLog[key]) return injuryLog[key];
+
+            let previousDate = new Date(dateToDisplay);
+            for (let i = 0; i < 365; i++) {
+                previousDate.setDate(previousDate.getDate() - 1);
+                const prevKey = `${athlete}-${toYYYYMMDD(previousDate)}`;
+                if (injuryLog[prevKey]) return { ...injuryLog[prevKey] };
+            }
+
+            return { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' };
+        }
+
+        // --- EVENT LISTENERS & HANDLERS ---
+        function setupEventListeners() {
+            prevWeekBtn.addEventListener('click', () => { currentEndDate.setDate(currentEndDate.getDate() - 14); renderGrid(); });
+            nextWeekBtn.addEventListener('click', () => { currentEndDate.setDate(currentEndDate.getDate() + 14); renderGrid(); });
+            cancelBtn.addEventListener('click', () => { modal.classList.add('hidden'); });
+            editForm.addEventListener('submit', handleFormSubmit);
+        }
+
+        function addBoxEventListeners() {
+            document.querySelectorAll('.status-box').forEach(box => {
+                box.addEventListener('dblclick', handleBoxDoubleClick);
+                box.addEventListener('mouseover', handleMouseOver);
+                box.addEventListener('mouseout', handleMouseOut);
+                box.addEventListener('mousemove', handleMouseMove);
+            });
+        }
+
+        function handleBoxDoubleClick(e) {
+            const box = e.target;
+            const statusData = JSON.parse(box.dataset.status);
+            if (statusData.status === 'Pending') return;
+
+            const athlete = box.dataset.athlete;
+            const date = box.dataset.date;
+            modalTitle.textContent = `Update status for ${athlete} on ${date}`;
             
-            // This function simulates the nightly update by carrying forward the last known status
-            function getStatusForDate(athlete, date) {
-                const dateString = toYYYYMMDD(date);
-                const key = `${athlete}-${dateString}`;
-
-                if (injuryLog[key]) {
-                    return injuryLog[key];
-                }
-
-                // If no entry for today, find the most recent previous entry
-                let previousDate = new Date(date);
-                let previousStatus = null;
-                for (let i = 0; i < 365; i++) { // Look back up to a year
-                    previousDate.setDate(previousDate.getDate() - 1);
-                    const prevDateString = toYYYYMMDD(previousDate);
-                    const prevKey = `${athlete}-${prevDateString}`;
-                    if (injuryLog[prevKey]) {
-                        previousStatus = injuryLog[prevKey];
-                        break;
-                    }
-                }
-                
-                if (previousStatus) {
-                     // Carry forward the status but clear specific injury details for the new day
-                    return { ...previousStatus };
-                }
-
-                // Default to 'Available' if no history
-                return { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' };
-            }
-
-
-            // --- EVENT LISTENERS ---
-            function setupEventListeners() {
-                prevWeekBtn.addEventListener('click', () => {
-                    currentEndDate.setDate(currentEndDate.getDate() - 14);
-                    renderGrid();
-                });
-
-                nextWeekBtn.addEventListener('click', () => {
-                    currentEndDate.setDate(currentEndDate.getDate() + 14);
-                    renderGrid();
-                });
-
-                cancelBtn.addEventListener('click', () => {
-                    modal.classList.add('hidden');
-                });
-
-                editForm.addEventListener('submit', handleFormSubmit);
-            }
-
-            function addBoxEventListeners() {
-                document.querySelectorAll('.status-box').forEach(box => {
-                    box.addEventListener('dblclick', handleBoxDoubleClick);
-                    box.addEventListener('mouseover', handleMouseOver);
-                    box.addEventListener('mouseout', handleMouseOut);
-                    box.addEventListener('mousemove', handleMouseMove);
-                });
-            }
-
-            // --- EVENT HANDLERS ---
-            function handleBoxDoubleClick(e) {
-                const box = e.target;
-                const athlete = box.dataset.athlete;
-                const date = box.dataset.date;
-                const statusData = JSON.parse(box.dataset.status);
-
-                modalTitle.textContent = `Update status for ${athlete} on ${date}`;
-                
-                // Populate form
-                document.getElementById('edit-athlete-name').value = athlete;
-                document.getElementById('edit-date').value = date;
-                
-                populateSelect('injury-site', appData.injurySites, statusData.injurySite);
-                populateSelect('injury', appData.injuries, statusData.injury);
-                populateSelect('severity', appData.severities, statusData.severity);
-                populateSelect('status', appData.statuses, statusData.status);
-                
-                document.getElementById('comment').value = statusData.comment || '';
-
-                modal.classList.remove('hidden');
-            }
-
-            function handleFormSubmit(e) {
-                e.preventDefault();
-                const athlete = document.getElementById('edit-athlete-name').value;
-                const date = document.getElementById('edit-date').value;
-                
-                const newStatusData = {
-                    status: document.getElementById('status').value,
-                    injurySite: document.getElementById('injury-site').value,
-                    injury: document.getElementById('injury').value,
-                    severity: document.getElementById('severity').value,
-                    comment: document.getElementById('comment').value
-                };
-
-                const key = `${athlete}-${date}`;
-                injuryLog[key] = newStatusData;
-                
-                saveInjuryLog();
-                modal.classList.add('hidden');
-                renderGrid(); // Re-render to show the update
-            }
-
-            function handleMouseOver(e) {
-                const box = e.target;
-                const statusData = JSON.parse(box.dataset.status);
-
-                if (statusData.status !== 'Available' && statusData.status) {
-                    let tooltipContent = `Status: ${statusData.status}`;
-                    if (statusData.injury) tooltipContent += `\nInjury: ${statusData.injury}`;
-                    if (statusData.injurySite) tooltipContent += `\nSite: ${statusData.injurySite}`;
-                    if (statusData.severity) tooltipContent += `\nSeverity: ${statusData.severity}`;
-                    if (statusData.comment) tooltipContent += `\n\nComment: ${statusData.comment}`;
-                    
-                    tooltip.textContent = tooltipContent;
-                    tooltip.style.opacity = '1';
-                }
-            }
+            document.getElementById('edit-athlete-name').value = athlete;
+            document.getElementById('edit-date').value = date;
             
-            function handleMouseOut() {
-                tooltip.style.opacity = '0';
-            }
+            populateSelect('injury-site', appData.injurySites, statusData.injurySite);
+            populateSelect('injury', appData.injuries, statusData.injury);
+            populateSelect('severity', appData.severities, statusData.severity);
+            populateSelect('status', appData.statuses, statusData.status);
+            document.getElementById('comment').value = statusData.comment || '';
+            modal.classList.remove('hidden');
+        }
 
-            function handleMouseMove(e) {
-                tooltip.style.left = `${e.pageX + 10}px`;
-                tooltip.style.top = `${e.pageY + 10}px`;
-            }
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const athlete = document.getElementById('edit-athlete-name').value;
+            const date = document.getElementById('edit-date').value;
+            const key = `${athlete}-${date}`;
+            const newStatusData = {
+                status: document.getElementById('status').value,
+                injurySite: document.getElementById('injury-site').value,
+                injury: document.getElementById('injury').value,
+                severity: document.getElementById('severity').value,
+                comment: document.getElementById('comment').value
+            };
+            await saveInjuryUpdate(key, newStatusData);
+            modal.classList.add('hidden');
+        }
 
-            // --- UTILITY FUNCTIONS ---
-            function toYYYYMMDD(date) {
-                const d = new Date(date);
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
+        function handleMouseOver(e) {
+            const statusData = JSON.parse(e.target.dataset.status);
+            if (statusData.status && statusData.status !== 'Available' && statusData.status !== 'Pending') {
+                tooltip.textContent = `Status: ${statusData.status}\nInjury: ${statusData.injury || 'N/A'}\nSite: ${statusData.injurySite || 'N/A'}\nSeverity: ${statusData.severity || 'N/A'}\n\nComment: ${statusData.comment || 'None'}`;
+                tooltip.style.opacity = '1';
             }
+        }
+        
+        function handleMouseOut() { tooltip.style.opacity = '0'; }
+        function handleMouseMove(e) { tooltip.style.left = `${e.pageX + 10}px`; tooltip.style.top = `${e.pageY + 10}px`; }
 
-            function formatDateHeader(date) {
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                return `${days[date.getDay()]}<br>${date.getDate()}/${date.getMonth() + 1}`;
-            }
-            
-            function formatDateDisplay(date) {
-                return date.toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                });
-            }
+        // --- UTILITY FUNCTIONS ---
+        function toYYYYMMDD(date) {
+            return new Date(date).toISOString().split('T')[0];
+        }
 
-            function populateSelect(elementId, options, selectedValue) {
-                const select = document.getElementById(elementId);
-                select.innerHTML = '<option value="">-- Select --</option>'; // Default empty option
-                options.forEach(option => {
-                    const isSelected = option === selectedValue ? 'selected' : '';
-                    select.innerHTML += `<option value="${option}" ${isSelected}>${option}</option>`;
-                });
-            }
+        function formatDateHeader(date) {
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            return `${days[date.getDay()]}<br>${date.getDate()}/${date.getMonth() + 1}`;
+        }
+        
+        function formatDateDisplay(date) {
+            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
 
-            // --- START THE APP ---
-            initializeApp();
-        });
+        function populateSelect(elementId, options, selectedValue) {
+            const select = document.getElementById(elementId);
+            select.innerHTML = '<option value="">-- Select --</option>';
+            options.forEach(option => {
+                const isSelected = option === selectedValue ? 'selected' : '';
+                select.innerHTML += `<option value="${option}" ${isSelected}>${option}</option>`;
+            });
+        }
+
+        initializeApp();
+    });
     </script>
 </body>
 </html>
