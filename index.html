@@ -149,7 +149,6 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
             const startDate = dates[0];
             dateRangeEl.textContent = `${formatDateDisplay(startDate)} - ${formatDateDisplay(currentEndDate)}`;
             
-            // Disable the "Prev" button if scrolling back would pass the season start date
             const prevDateLimit = new Date(startDate);
             prevDateLimit.setDate(prevDateLimit.getDate() - 1);
             prevWeekBtn.disabled = prevDateLimit < seasonStartDate;
@@ -160,7 +159,6 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
             appData.athletes.forEach(athlete => {
                 trackerGrid.innerHTML += `<div class="athlete-name">${athlete}</div>`;
                 dates.forEach(date => {
-                    // Don't render cells for dates before the season starts
                     if (date < seasonStartDate) {
                         trackerGrid.innerHTML += `<div class="status-box-container p-1"><div class="status-box" style="background-color: #f3f4f6; cursor: default;"></div></div>`;
                         return;
@@ -181,31 +179,31 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
             addBoxEventListeners();
         }
         
+        // --- SIMPLIFIED LOGIC ---
+        // The GitHub Action now handles the nightly update. This function just displays what's in the log.
         function getStatusForDate(athlete, dateToDisplay) {
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const displayDay = new Date(dateToDisplay.getFullYear(), dateToDisplay.getMonth(), dateToDisplay.getDate());
-
-            if (displayDay > today) {
-                const tomorrow = new Date(today);
-                tomorrow.setDate(today.getDate() + 1);
-                const isAfterCutoff = now.getHours() > 23 || (now.getHours() === 23 && now.getMinutes() >= 30);
-                if (!(displayDay.getTime() === tomorrow.getTime() && isAfterCutoff)) {
-                    return { status: 'Pending' };
-                }
-            }
-
             const key = `${athlete}-${toYYYYMMDD(dateToDisplay)}`;
+
+            // If an entry exists for this specific day, use it.
             if (injuryLog[key]) return injuryLog[key];
 
+            const today = new Date(new Date().setHours(0,0,0,0));
+            const displayDay = new Date(dateToDisplay.setHours(0,0,0,0));
+
+            // If the date is in the future and has no entry, it's "Pending".
+            if (displayDay > today) {
+                return { status: 'Pending' };
+            }
+
+            // If it's a past date with no entry, look backwards for the last known status.
             let previousDate = new Date(dateToDisplay);
-            // Look back for previous status, but stop if we go before the season start date
             while (previousDate > seasonStartDate) {
                 previousDate.setDate(previousDate.getDate() - 1);
                 const prevKey = `${athlete}-${toYYYYMMDD(previousDate)}`;
                 if (injuryLog[prevKey]) return { ...injuryLog[prevKey] };
             }
 
+            // Default to "Available" if no history is found.
             return { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' };
         }
 
@@ -228,7 +226,7 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
 
         function handleBoxDoubleClick(e) {
             const box = e.target;
-            if (!box.dataset.status) return; // Ignore empty boxes before season start
+            if (!box.dataset.status) return;
             const statusData = JSON.parse(box.dataset.status);
             if (statusData.status === 'Pending') return;
 
