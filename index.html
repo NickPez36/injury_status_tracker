@@ -130,38 +130,45 @@
         }
         
         async function backfillInitialData() {
-            if (!appData.athletes || Object.keys(injuryLog).length === 0) return;
+            // Only proceed if the athlete list has been loaded
+            if (!appData.athletes || appData.athletes.length === 0) {
+                console.log("Waiting for app data before back-filling...");
+                return;
+            }
 
             const athletesWithNoData = appData.athletes.filter(athlete => 
                 !Object.keys(injuryLog).some(key => key.startsWith(athlete))
             );
 
-            if (athletesWithNoData.length === 0) return;
+            if (athletesWithNoData.length === 0) {
+                console.log("All athletes have existing data. No back-fill needed.");
+                return; // All athletes already have some data, no need to backfill.
+            }
 
             console.log("Back-filling data for new athletes:", athletesWithNoData.join(', '));
 
             let backfillPayload = [];
             const today = new Date();
             for (const athlete of athletesWithNoData) {
-                for (let i = 0; i < 14; i++) {
+                for (let i = 0; i < 14; i++) { // Backfill the last 14 days
                     const date = new Date(today);
                     date.setDate(today.getDate() - i);
                     if (date >= seasonStartDate) {
                         const key = `${athlete}-${toYYYYMMDD(date)}`;
-                        if (!injuryLog[key]) {
-                            backfillPayload.push({
-                                key,
-                                data: { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' }
-                            });
-                        }
+                        // We already know this athlete has no data, so no need to check injuryLog[key]
+                        backfillPayload.push({
+                            key,
+                            data: { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' }
+                        });
                     }
                 }
             }
             
             if (backfillPayload.length > 0) {
+                console.log(`Sending batch update with ${backfillPayload.length} entries.`);
                 const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
                 if (result) {
-                    await fetchInjuryLog(); // Refresh log after back-filling
+                    await fetchInjuryLog(); // Refresh log from server after back-filling
                 }
             }
         }
