@@ -118,10 +118,10 @@
             injuryLog = logResult;
 
             // 4. Check if a back-fill is needed.
-            const needsBackfill = await backfillInitialData();
+            const wasBackfilled = await backfillInitialData();
             
             // 5. If data was back-filled, we MUST re-fetch the injury log to get the new data.
-            if (needsBackfill) {
+            if (wasBackfilled) {
                 injuryLog = await fetchInjuryLog();
             }
             
