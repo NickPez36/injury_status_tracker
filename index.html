@@ -23,7 +23,7 @@
         .input-field:focus { border-color: #718096; ring-color: #718096; }
         #tooltip { background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; z-index: 100; white-space: pre-wrap; max-width: 250px; }
         #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
-        #debug-panel { font-family: monospace; font-size: 12px; background-color: #000; color: #0f0; padding: 10px; margin-top: 20px; border-radius: 8px; white-space: pre-wrap; }
+        #debug-panel { font-family: monospace; font-size: 12px; background-color: #000; color: #0f0; padding: 10px; margin-top: 20px; border-radius: 8px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
         @media (max-width: 768px) { #tracker-grid { grid-template-columns: 80px repeat(14, minmax(30px, 1fr)); } .grid-header, .athlete-name { font-size: 0.7rem; padding: 0.5rem; } }
     </style>
 </head>
@@ -107,6 +107,7 @@
         function logDebug(message) {
             console.log(message);
             debugPanel.textContent += `> ${message}\n`;
+            debugPanel.scrollTop = debugPanel.scrollHeight;
         }
 
         // --- FINAL ROBUST INITIALIZATION SEQUENCE ---
@@ -255,7 +256,9 @@
         }
 
         function renderGrid() {
+            logDebug("RenderGrid called...");
             if (!appData.athletes || appData.athletes.length === 0) {
+                logDebug("RenderGrid aborted: No athlete data available.");
                 trackerGrid.innerHTML = `<p class="text-gray-400 p-4 col-span-full text-center">Loading athlete data...</p>`;
                 return;
             }
@@ -280,15 +283,26 @@
             trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10 p-2">Athlete</div>`;
             dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
 
+            let firstCellData = null; // For debugging
+
             appData.athletes.forEach(athlete => {
                 trackerGrid.innerHTML += `<div class="athlete-name sticky left-0 z-10 p-2">${athlete}</div>`;
-                dates.forEach(date => {
+                dates.forEach((date, dateIndex) => {
                     const cellContent = (date < seasonStartDate)
                         ? `<div class="status-box" style="background-color: #1a202c; cursor: default;"></div>`
                         : createStatusBox(athlete, date);
+                    
+                    if (!firstCellData && dateIndex === 0) {
+                        firstCellData = getStatusForDate(athlete, date);
+                    }
+
                     trackerGrid.innerHTML += `<div class="p-1">${cellContent}</div>`;
                 });
             });
+            logDebug(`Rendered grid for ${appData.athletes.length} athletes.`);
+            if(firstCellData) {
+                logDebug(`First athlete's first cell data: ${JSON.stringify(firstCellData)}`);
+            }
             addBoxEventListeners();
         }
 
