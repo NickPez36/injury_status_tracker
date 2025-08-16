@@ -1,4 +1,4 @@
-﻿AthleteName,InjurySite,Injury,Severity,Status,ColourCode
+AthleteName,InjurySite,Injury,Severity,Status,ColourCode
 Nick Perry,Hamstring,Strain,Grade 1 (0 - 3 weeks),Available,Green
 Zach Taiba,Calf,Sprain,Grade 2 (3 - 6 weeks),Modified - Match Ready,Blue
 Riley Martin,Shoulder,Break,Grade 3 (6+ weeks),Modified - Training Only,Yellow
@@ -17,3 +17,4 @@ Cruz Martin,Achilies,,,,
 ,Humerous,,,,
 ,Shank,,,,
 ,Femur,,,,
+Corey Hardy,,,,,,
