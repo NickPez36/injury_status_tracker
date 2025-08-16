@@ -23,6 +23,7 @@
         .input-field:focus { border-color: #718096; ring-color: #718096; }
         #tooltip { background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; z-index: 100; white-space: pre-wrap; max-width: 250px; }
         #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
+        #debug-panel { font-family: monospace; font-size: 12px; background-color: #000; color: #0f0; padding: 10px; margin-top: 20px; border-radius: 8px; white-space: pre-wrap; }
         @media (max-width: 768px) { #tracker-grid { grid-template-columns: 80px repeat(14, minmax(30px, 1fr)); } .grid-header, .athlete-name { font-size: 0.7rem; padding: 0.5rem; } }
     </style>
 </head>
@@ -49,6 +50,9 @@
         <div id="tracker-grid" class="overflow-x-auto container-bg rounded-lg shadow-lg">
             <!-- Grid will be populated by JavaScript -->
         </div>
+        
+        <!-- Debug Panel -->
+        <div id="debug-panel"></div>
     </div>
 
     <!-- Edit Modal -->
@@ -92,49 +96,57 @@
         const cancelBtn = document.getElementById('cancel-edit');
         const setAvailableBtn = document.getElementById('set-available-btn');
         const tooltip = document.getElementById('tooltip');
+        const debugPanel = document.getElementById('debug-panel');
 
         let appData = {};
         let injuryLog = {};
         let currentEndDate = new Date();
         const seasonStartDate = new Date('2025-01-01T00:00:00');
         const isLocal = window.location.protocol === 'blob:';
+        
+        function logDebug(message) {
+            console.log(message);
+            debugPanel.textContent += `> ${message}\n`;
+        }
 
-        // --- ROBUST INITIALIZATION SEQUENCE ---
+        // --- FINAL ROBUST INITIALIZATION SEQUENCE ---
         async function initializeApp() {
             try {
-                // 1. Fetch both config and log data in parallel.
-                const [configResult, logResult] = await Promise.all([
-                    fetchAppData(),
-                    fetchInjuryLog()
-                ]);
+                logDebug("Initializing application...");
+                
+                // 1. Fetch the app configuration (athlete list, etc.).
+                appData = await fetchAppData();
+                if (!appData) throw new Error("Could not load app configuration.");
+                logDebug(`Loaded config for ${appData.athletes.length} athletes.`);
 
-                // 2. If either fetch fails (and we're not local), stop.
-                if (!configResult || !logResult) {
-                    throw new Error("Could not load required app data.");
-                }
+                // 2. Fetch the current injury log.
+                injuryLog = await fetchInjuryLog();
+                if (injuryLog === null) throw new Error("Could not load injury log.");
+                logDebug(`Loaded injury log with ${Object.keys(injuryLog).length} entries.`);
+                
+                // 3. Render the grid with the data we have so far.
+                renderGrid();
+                logDebug("Initial grid rendered.");
 
-                // 3. Assign the data to our state variables.
-                appData = configResult;
-                injuryLog = logResult;
-
-                // 4. Check if a back-fill is needed.
+                // 4. After the first render, check if a back-fill is needed.
                 const wasBackfilled = await backfillInitialData();
                 
-                // 5. If data was back-filled, we MUST re-fetch the injury log to get the new data.
+                // 5. If data was back-filled, re-fetch the log and re-render the grid.
                 if (wasBackfilled) {
-                    const updatedLog = await fetchInjuryLog();
-                    if (updatedLog) {
-                        injuryLog = updatedLog;
+                    logDebug("Back-fill was performed. Re-fetching injury log...");
+                    injuryLog = await fetchInjuryLog();
+                    if (injuryLog) {
+                        logDebug(`Re-fetched injury log with ${Object.keys(injuryLog).length} entries.`);
+                        renderGrid();
+                        logDebug("Grid re-rendered with back-filled data.");
                     }
                 }
                 
-                // 6. Set up all the button clicks and other interactions.
+                // 6. Set up all event listeners.
                 setupEventListeners();
-                
-                // 7. Finally, with all data present, render the grid.
-                renderGrid();
+                logDebug("Event listeners are set up. Application ready.");
             } catch (error) {
-                console.error("App initialization failed:", error);
+                logDebug(`CRITICAL ERROR: ${error.message}`);
                 trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full text-center">A critical error occurred. Please check the console.</p>`;
             }
         }
@@ -145,11 +157,11 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return await response.json();
             } catch (error) {
-                console.error("Error fetching app config:", error);
                 if (isLocal) {
-                    console.log("Local environment detected. Loading mock app config.");
+                    logDebug("Local environment: Loading mock app config.");
                     return loadMockAppData();
                 }
+                logDebug(`Error fetching app config: ${error.message}`);
                 return null;
             }
         }
@@ -160,11 +172,11 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return await response.json();
             } catch (error) {
-                console.error("Error fetching injury log:", error);
                 if (isLocal) {
-                    console.log("Local environment detected. Using empty injury log.");
+                    logDebug("Local environment: Using empty injury log.");
                     return {};
                 }
+                logDebug(`Error fetching injury log: ${error.message}`);
                 return null;
             }
         }
@@ -177,9 +189,12 @@
                 !Object.keys(injuryLog).some(key => key.startsWith(athlete))
             );
 
-            if (athletesWithNoData.length === 0) return false;
+            if (athletesWithNoData.length === 0) {
+                logDebug("All athletes have existing data. No back-fill needed.");
+                return false;
+            }
 
-            console.log("Back-filling data for new athletes:", athletesWithNoData.join(', '));
+            logDebug(`Back-filling data for new athletes: ${athletesWithNoData.join(', ')}`);
 
             let backfillPayload = [];
             const today = new Date();
@@ -198,7 +213,7 @@
             }
             
             if (backfillPayload.length > 0) {
-                console.log(`Sending batch update with ${backfillPayload.length} entries.`);
+                logDebug(`Sending batch update with ${backfillPayload.length} entries.`);
                 const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
                 return result !== null;
             }
@@ -222,7 +237,7 @@
                 }
                 return await response.json();
             } catch (error) {
-                console.error(`Error posting to ${endpoint}:`, error);
+                logDebug(`Error posting to ${endpoint}: ${error.message}`);
                 alert(`Failed to save update: ${error.message}`);
                 return null;
             }
