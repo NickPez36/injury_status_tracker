@@ -7,138 +7,144 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        #tooltip{z-index:100;white-space:pre-wrap;max-width:250px}#tracker-grid{display:grid;grid-template-columns:150px repeat(14,1fr);gap:1px;background-color:#e5e7eb}.grid-header,.athlete-name,.status-box{padding:.75rem;text-align:center;background-color:#fff}.grid-header{background-color:#f3f4f6;font-weight:600;color:#374151;font-size:.8rem;position:sticky;top:0;z-index:10}.athlete-name{font-weight:500;text-align:left;position:sticky;left:0;z-index:5}.status-box{width:100%;height:50px;border-radius:4px;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.status-box:hover{transform:scale(1.05);box-shadow:0 4px 8px rgba(0,0,0,.1)}#edit-modal.hidden{display:none}#edit-modal{display:flex} button:disabled{opacity:0.5;cursor:not-allowed;}
+        body { background-color: #1a202c; color: #e2e8f0; }
+        .container-bg { background-color: #2d3748; }
+        .header-text { color: #edf2f7; }
+        .secondary-text { color: #a0aec0; }
+        .button-primary { background-color: #4a5568; color: #edf2f7; }
+        .button-primary:hover { background-color: #718096; }
+        .button-primary:disabled { background-color: #2d3748; color: #718096; cursor: not-allowed; }
+        .grid-header { background-color: #2d3748; color: #a0aec0; }
+        .athlete-name { background-color: #2d3748; color: #e2e8f0; }
+        .status-box { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .status-box:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .modal-content { background-color: #2d3748; }
+        .input-field { background-color: #1a202c; border-color: #4a5568; color: #e2e8f0; }
+        .input-field:focus { border-color: #718096; ring-color: #718096; }
+        #tooltip { background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; z-index: 100; white-space: pre-wrap; max-width: 250px; }
+        #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
+        @media (max-width: 768px) { #tracker-grid { grid-template-columns: 80px repeat(14, minmax(30px, 1fr)); } .grid-header, .athlete-name { font-size: 0.7rem; padding: 0.5rem; } }
     </style>
 </head>
-<body class="bg-gray-50 font-sans">
+<body class="font-sans">
 
-    <div class="container mx-auto p-4">
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">Athlete Injury Status Tracker</h1>
-            <p class="text-gray-500">Track and manage athlete availability with ease.</p>
+    <div class="container mx-auto p-2 sm:p-4">
+        <header class="text-center my-6">
+            <h1 class="text-3xl sm:text-4xl font-bold header-text">Athlete Injury Status Tracker</h1>
         </header>
 
-        <div class="flex justify-center items-center mb-6 space-x-4">
-            <button id="prev-week" class="px-4 py-2 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-800 transition-colors duration-300">&lt; Prev 14 Days</button>
-            <h2 id="date-range" class="text-xl font-semibold text-gray-700"></h2>
-            <button id="next-week" class="px-4 py-2 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-800 transition-colors duration-300">Next 14 Days &gt;</button>
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
+            <button id="add-player-btn" class="w-full sm:w-auto px-4 py-2 button-primary rounded-lg shadow">Add Player</button>
+            <div class="flex items-center space-x-2">
+                <button id="prev-week" class="px-4 py-2 button-primary rounded-lg shadow">&lt;</button>
+                <h2 id="date-range" class="text-lg sm:text-xl font-semibold text-center header-text w-48 sm:w-64"></h2>
+                <button id="next-week" class="px-4 py-2 button-primary rounded-lg shadow">&gt;</button>
+            </div>
+            <button id="today-btn" class="w-full sm:w-auto px-4 py-2 button-primary rounded-lg shadow hidden">Today</button>
         </div>
 
-        <div id="tracker-grid" class="overflow-x-auto bg-white rounded-lg shadow">
+        <div id="tracker-grid" class="overflow-x-auto container-bg rounded-lg shadow-lg">
             <!-- Grid will be populated by JavaScript -->
         </div>
     </div>
 
     <!-- Edit Modal -->
-    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
-            <h3 class="text-2xl font-bold mb-4 text-gray-800" id="modal-title">Edit Status</h3>
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-md">
+            <h3 class="text-2xl font-bold mb-4 header-text" id="modal-title">Edit Status</h3>
             <form id="edit-form">
                 <input type="hidden" id="edit-athlete-name">
                 <input type="hidden" id="edit-date">
-                <div class="mb-4"><label for="injury-site" class="block text-sm font-medium text-gray-700 mb-1">Injury Site</label><select id="injury-site" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select></div>
-                <div class="mb-4"><label for="injury" class="block text-sm font-medium text-gray-700 mb-1">Injury</label><select id="injury" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select></div>
-                <div class="mb-4"><label for="severity" class="block text-sm font-medium text-gray-700 mb-1">Severity</label><select id="severity" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select></div>
-                <div class="mb-4"><label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label><select id="status" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select></div>
-                <div class="mb-6"><label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Comment</label><textarea id="comment" rows="3" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></textarea></div>
-                <div class="flex justify-end space-x-3"><button type="button" id="cancel-edit" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button><button type="submit" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">Save Changes</button></div>
+                <div class="mb-4"><label for="injury-site" class="block text-sm font-medium secondary-text mb-1">Injury Site</label><select id="injury-site" class="input-field w-full p-2 border rounded-lg"></select></div>
+                <div class="mb-4"><label for="injury" class="block text-sm font-medium secondary-text mb-1">Injury</label><select id="injury" class="input-field w-full p-2 border rounded-lg"></select></div>
+                <div class="mb-4"><label for="severity" class="block text-sm font-medium secondary-text mb-1">Severity</label><select id="severity" class="input-field w-full p-2 border rounded-lg"></select></div>
+                <div class="mb-4"><label for="status" class="block text-sm font-medium secondary-text mb-1">Status</label><select id="status" class="input-field w-full p-2 border rounded-lg"></select></div>
+                <div class="mb-6"><label for="comment" class="block text-sm font-medium secondary-text mb-1">Comment</label><textarea id="comment" rows="3" class="input-field w-full p-2 border rounded-lg"></textarea></div>
+                <div class="flex justify-between items-center">
+                    <button type="button" id="set-available-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Set Available</button>
+                    <div class="space-x-3">
+                        <button type="button" id="cancel-edit" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Cancel</button>
+                        <button type="submit" class="px-4 py-2 button-primary">Save</button>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Tooltip -->
-    <div id="tooltip" class="absolute bg-gray-900 text-white text-sm rounded-lg py-2 px-3 shadow-lg opacity-0 transition-opacity pointer-events-none"></div>
+    <div id="tooltip" class="absolute rounded-lg py-2 px-3 shadow-lg opacity-0 transition-opacity pointer-events-none"></div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- DOM ELEMENTS ---
         const trackerGrid = document.getElementById('tracker-grid');
         const dateRangeEl = document.getElementById('date-range');
         const prevWeekBtn = document.getElementById('prev-week');
         const nextWeekBtn = document.getElementById('next-week');
+        const todayBtn = document.getElementById('today-btn');
+        const addPlayerBtn = document.getElementById('add-player-btn');
         const modal = document.getElementById('edit-modal');
         const modalTitle = document.getElementById('modal-title');
         const editForm = document.getElementById('edit-form');
         const cancelBtn = document.getElementById('cancel-edit');
+        const setAvailableBtn = document.getElementById('set-available-btn');
         const tooltip = document.getElementById('tooltip');
 
-        // --- STATE MANAGEMENT ---
         let appData = {};
         let injuryLog = {};
         let currentEndDate = new Date();
-        const seasonStartDate = new Date('2025-01-01T00:00:00'); // The earliest date to show data for
+        const seasonStartDate = new Date('2025-01-01T00:00:00');
 
-        // --- INITIALIZATION ---
         async function initializeApp() {
-            loadConfigData();
+            await fetchAppData();
             await fetchInjuryLog();
             setupEventListeners();
         }
 
-        // --- DATA LOADING ---
-        function loadConfigData() {
-            const csvText = `AthleteName,InjurySite,Injury,Severity,Status,ColourCode
-Nick Pezzatta,Knee,ACL Tear,High,Out,#D32F2F
-John Smith,Ankle,Sprain,Medium,Modified,#FFC107
-Jane Doe,Shoulder,Dislocation,High,Out,#D32F2F
-Peter Jones,Back,Strain,Low,Modified,#FFC107
-Mary Williams,Foot,Fracture,High,Out,#D32F2F
-Chris Brown,Hamstring,Pull,Medium,Available,#4CAF50
-Sarah Miller,Groin,Strain,Low,Available,#4CAF50
-David Garcia,Head,Concussion,High,Out,#D32F2F
--,,-,-,Pending,#E0E0E0`;
-
-            const lines = csvText.split('\n').filter(line => line.trim() !== '');
-            const headers = lines.shift().split(',').map(h => h.trim());
-            const data = lines.map(line => {
-                const values = line.split(',').map(v => v.trim());
-                let obj = {};
-                headers.forEach((header, i) => { obj[header] = values[i]; });
-                return obj;
-            });
-            
-            appData.athletes = [...new Set(data.map(item => item.AthleteName).filter(name => name !== '-'))].sort();
-            appData.injurySites = [...new Set(data.map(item => item.InjurySite).filter(site => site !== '-'))];
-            appData.injuries = [...new Set(data.map(item => item.Injury).filter(inj => inj !== '-'))];
-            appData.severities = [...new Set(data.map(item => item.Severity).filter(sev => sev !== '-'))];
-            appData.statuses = [...new Set(data.map(item => item.Status).filter(stat => stat !== '-'))];
-            appData.colorMap = data.reduce((acc, item) => {
-                if (item.Status && item.ColourCode) { acc[item.Status] = item.ColourCode; }
-                return acc;
-            }, {});
+        async function fetchAppData() {
+            try {
+                const response = await fetch('/.netlify/functions/injury-log?config=true');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                appData = data;
+                renderGrid();
+            } catch (error) {
+                console.error("Error fetching app config:", error);
+                trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full">Could not load app configuration.</p>`;
+            }
         }
 
-        // --- NETLIFY FUNCTION INTEGRATION ---
         async function fetchInjuryLog() {
             try {
                 const response = await fetch('/.netlify/functions/injury-log');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
-                injuryLog = data;
+                injuryLog = await response.json();
                 renderGrid();
             } catch (error) {
                 console.error("Error fetching injury log:", error);
-                trackerGrid.innerHTML = `<p class="text-red-500 p-4 col-span-full">Could not load injury data. Please check the Netlify Function logs.</p>`;
             }
         }
 
-        async function saveInjuryUpdate(key, data) {
+        async function postData(endpoint, body) {
             try {
-                const response = await fetch('/.netlify/functions/injury-log', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, ...data })
+                    body: JSON.stringify(body)
                 });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                await fetchInjuryLog();
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
             } catch (error) {
-                console.error("Error saving injury update:", error);
-                alert("Failed to save update. Please try again.");
+                console.error(`Error posting to ${endpoint}:`, error);
+                alert(`Failed to save update: ${error.message}`);
+                return null;
             }
         }
 
-        // --- RENDERING ---
         function renderGrid() {
+            if (!appData.athletes) return;
             trackerGrid.innerHTML = '';
             const dates = Array.from({ length: 14 }, (_, i) => {
                 const date = new Date(currentEndDate);
@@ -153,75 +159,81 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
             prevDateLimit.setDate(prevDateLimit.getDate() - 1);
             prevWeekBtn.disabled = prevDateLimit < seasonStartDate;
 
-            trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10">Athlete</div>`;
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            todayBtn.classList.toggle('hidden', currentEndDate.toDateString() === today.toDateString());
+
+            trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10 p-2">Athlete</div>`;
             dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
 
             appData.athletes.forEach(athlete => {
-                trackerGrid.innerHTML += `<div class="athlete-name">${athlete}</div>`;
+                trackerGrid.innerHTML += `<div class="athlete-name sticky left-0 z-10 p-2">${athlete}</div>`;
                 dates.forEach(date => {
-                    if (date < seasonStartDate) {
-                        trackerGrid.innerHTML += `<div class="status-box-container p-1"><div class="status-box" style="background-color: #f3f4f6; cursor: default;"></div></div>`;
-                        return;
-                    }
-                    const statusData = getStatusForDate(athlete, date);
-                    const color = appData.colorMap[statusData.status] || '#cccccc';
-                    trackerGrid.innerHTML += `
-                        <div class="status-box-container p-1">
-                             <div class="status-box" 
-                                  style="background-color: ${color};"
-                                  data-athlete="${athlete}" 
-                                  data-date="${toYYYYMMDD(date)}"
-                                  data-status='${JSON.stringify(statusData)}'>
-                             </div>
-                        </div>`;
+                    const cellContent = (date < seasonStartDate)
+                        ? `<div class="status-box" style="background-color: #1a202c; cursor: default;"></div>`
+                        : createStatusBox(athlete, date);
+                    trackerGrid.innerHTML += `<div class="p-1">${cellContent}</div>`;
                 });
             });
             addBoxEventListeners();
         }
-        
-        // --- SIMPLIFIED LOGIC ---
-        // The GitHub Action now handles the nightly update. This function just displays what's in the log.
+
+        function createStatusBox(athlete, date) {
+            const statusData = getStatusForDate(athlete, date);
+            const color = appData.colorMap[statusData.status] || '#4a5568';
+            return `<div class="status-box rounded" 
+                         style="background-color: ${color};"
+                         data-athlete="${athlete}" 
+                         data-date="${toYYYYMMDD(date)}"
+                         data-status='${JSON.stringify(statusData)}'>
+                    </div>`;
+        }
+
         function getStatusForDate(athlete, dateToDisplay) {
             const key = `${athlete}-${toYYYYMMDD(dateToDisplay)}`;
-
-            // If an entry exists for this specific day, use it.
             if (injuryLog[key]) return injuryLog[key];
 
-            const today = new Date(new Date().setHours(0,0,0,0));
-            const displayDay = new Date(dateToDisplay.setHours(0,0,0,0));
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const displayDay = new Date(dateToDisplay); displayDay.setHours(0, 0, 0, 0);
 
-            // If the date is in the future and has no entry, it's "Pending".
-            if (displayDay > today) {
-                return { status: 'Pending' };
-            }
+            if (displayDay > today) return { status: 'Pending' };
 
-            // If it's a past date with no entry, look backwards for the last known status.
             let previousDate = new Date(dateToDisplay);
             while (previousDate > seasonStartDate) {
                 previousDate.setDate(previousDate.getDate() - 1);
                 const prevKey = `${athlete}-${toYYYYMMDD(previousDate)}`;
                 if (injuryLog[prevKey]) return { ...injuryLog[prevKey] };
             }
-
-            // Default to "Available" if no history is found.
-            return { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' };
+            return { status: 'Available' };
         }
 
-        // --- EVENT LISTENERS & HANDLERS ---
         function setupEventListeners() {
             prevWeekBtn.addEventListener('click', () => { currentEndDate.setDate(currentEndDate.getDate() - 14); renderGrid(); });
             nextWeekBtn.addEventListener('click', () => { currentEndDate.setDate(currentEndDate.getDate() + 14); renderGrid(); });
-            cancelBtn.addEventListener('click', () => { modal.classList.add('hidden'); });
+            todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
+            addPlayerBtn.addEventListener('click', handleAddPlayer);
+            cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             editForm.addEventListener('submit', handleFormSubmit);
+            setAvailableBtn.addEventListener('click', handleSetAvailable);
         }
 
         function addBoxEventListeners() {
             document.querySelectorAll('.status-box').forEach(box => {
                 box.addEventListener('dblclick', handleBoxDoubleClick);
                 box.addEventListener('mouseover', handleMouseOver);
-                box.addEventListener('mouseout', handleMouseOut);
-                box.addEventListener('mousemove', handleMouseMove);
+                box.addEventListener('mouseout', () => tooltip.style.opacity = '0');
+                box.addEventListener('mousemove', e => { tooltip.style.left = `${e.pageX + 15}px`; tooltip.style.top = `${e.pageY + 15}px`; });
             });
+        }
+
+        async function handleAddPlayer() {
+            const newName = prompt("Enter the new player's full name:");
+            if (newName && newName.trim()) {
+                const result = await postData('/.netlify/functions/injury-log', { action: 'addPlayer', name: newName.trim() });
+                if (result) {
+                    await fetchAppData(); // Refresh the athlete list
+                }
+            }
         }
 
         function handleBoxDoubleClick(e) {
@@ -229,13 +241,17 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
             if (!box.dataset.status) return;
             const statusData = JSON.parse(box.dataset.status);
             if (statusData.status === 'Pending') return;
-
-            const athlete = box.dataset.athlete;
-            const date = box.dataset.date;
-            modalTitle.textContent = `Update status for ${athlete} on ${date}`;
             
-            document.getElementById('edit-athlete-name').value = athlete;
-            document.getElementById('edit-date').value = date;
+            const today = new Date(); today.setHours(0,0,0,0);
+            const boxDate = new Date(box.dataset.date);
+            if (boxDate > today) {
+                alert("You cannot log an injury for a future date.");
+                return;
+            }
+
+            modalTitle.textContent = `Update: ${box.dataset.athlete} on ${box.dataset.date}`;
+            document.getElementById('edit-athlete-name').value = box.dataset.athlete;
+            document.getElementById('edit-date').value = box.dataset.date;
             
             populateSelect('injury-site', appData.injurySites, statusData.injurySite);
             populateSelect('injury', appData.injuries, statusData.injury);
@@ -257,8 +273,20 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
                 severity: document.getElementById('severity').value,
                 comment: document.getElementById('comment').value
             };
-            await saveInjuryUpdate(key, newStatusData);
-            modal.classList.add('hidden');
+            const result = await postData('/.netlify/functions/injury-log', { action: 'updateLog', key, data: newStatusData });
+            if (result) {
+                injuryLog[key] = newStatusData;
+                renderGrid();
+                modal.classList.add('hidden');
+            }
+        }
+
+        function handleSetAvailable() {
+            document.getElementById('injury-site').value = '';
+            document.getElementById('injury').value = '';
+            document.getElementById('severity').value = '';
+            document.getElementById('status').value = 'Available';
+            document.getElementById('comment').value = '';
         }
 
         function handleMouseOver(e) {
@@ -269,24 +297,10 @@ David Garcia,Head,Concussion,High,Out,#D32F2F
                 tooltip.style.opacity = '1';
             }
         }
-        
-        function handleMouseOut() { tooltip.style.opacity = '0'; }
-        function handleMouseMove(e) { tooltip.style.left = `${e.pageX + 10}px`; tooltip.style.top = `${e.pageY + 10}px`; }
 
-        // --- UTILITY FUNCTIONS ---
-        function toYYYYMMDD(date) {
-            return new Date(date).toISOString().split('T')[0];
-        }
-
-        function formatDateHeader(date) {
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            return `${days[date.getDay()]}<br>${date.getDate()}/${date.getMonth() + 1}`;
-        }
-        
-        function formatDateDisplay(date) {
-            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        }
-
+        function toYYYYMMDD(date) { return new Date(date).toISOString().split('T')[0]; }
+        function formatDateHeader(date) { const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; return `${days[date.getDay()]}<br>${date.getDate()}`; }
+        function formatDateDisplay(date) { return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
         function populateSelect(elementId, options, selectedValue) {
             const select = document.getElementById(elementId);
             select.innerHTML = '<option value="">-- Select --</option>';
