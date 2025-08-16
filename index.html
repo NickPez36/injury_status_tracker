@@ -115,24 +115,20 @@
             try {
                 logDebug("Initializing application...");
                 
-                // 1. Fetch the app configuration (athlete list, etc.).
                 appData = await fetchAppData();
                 if (!appData) throw new Error("Could not load app configuration.");
                 logDebug(`Loaded config for ${appData.athletes.length} athletes.`);
+                logDebug(`Color Map Loaded: ${JSON.stringify(appData.colorMap)}`);
 
-                // 2. Fetch the current injury log.
                 injuryLog = await fetchInjuryLog();
                 if (injuryLog === null) throw new Error("Could not load injury log.");
                 logDebug(`Loaded injury log with ${Object.keys(injuryLog).length} entries.`);
                 
-                // 3. Render the grid with the data we have so far.
                 renderGrid();
                 logDebug("Initial grid rendered.");
 
-                // 4. After the first render, check if a back-fill is needed.
                 const wasBackfilled = await backfillInitialData();
                 
-                // 5. If data was back-filled, re-fetch the log and re-render the grid.
                 if (wasBackfilled) {
                     logDebug("Back-fill was performed. Re-fetching injury log...");
                     injuryLog = await fetchInjuryLog();
@@ -143,7 +139,6 @@
                     }
                 }
                 
-                // 6. Set up all event listeners.
                 setupEventListeners();
                 logDebug("Event listeners are set up. Application ready.");
             } catch (error) {
@@ -283,32 +278,29 @@
             trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10 p-2">Athlete</div>`;
             dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
 
-            let firstCellData = null; // For debugging
-
             appData.athletes.forEach(athlete => {
                 trackerGrid.innerHTML += `<div class="athlete-name sticky left-0 z-10 p-2">${athlete}</div>`;
-                dates.forEach((date, dateIndex) => {
+                dates.forEach((date) => {
                     const cellContent = (date < seasonStartDate)
                         ? `<div class="status-box" style="background-color: #1a202c; cursor: default;"></div>`
                         : createStatusBox(athlete, date);
-                    
-                    if (!firstCellData && dateIndex === 0) {
-                        firstCellData = getStatusForDate(athlete, date);
-                    }
-
                     trackerGrid.innerHTML += `<div class="p-1">${cellContent}</div>`;
                 });
             });
             logDebug(`Rendered grid for ${appData.athletes.length} athletes.`);
-            if(firstCellData) {
-                logDebug(`First athlete's first cell data: ${JSON.stringify(firstCellData)}`);
-            }
             addBoxEventListeners();
         }
 
         function createStatusBox(athlete, date) {
             const statusData = getStatusForDate(athlete, date);
-            const color = appData.colorMap[statusData.status] || '#4a5568';
+            const statusKey = statusData.status || "Unknown";
+            const color = appData.colorMap[statusKey] || '#4a5568'; // Fallback color
+            
+            // Detailed logging for the first athlete to help debug
+            if (appData.athletes.indexOf(athlete) === 0) {
+                logDebug(`Athlete: ${athlete}, Date: ${toYYYYMMDD(date)}, Status: '${statusKey}', Color: ${color}`);
+            }
+
             return `<div class="status-box rounded" 
                          style="background-color: ${color};"
                          data-athlete="${athlete}" 
