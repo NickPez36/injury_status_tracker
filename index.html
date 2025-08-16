@@ -99,31 +99,36 @@
         const seasonStartDate = new Date('2025-01-01T00:00:00');
         const isLocal = window.location.protocol === 'blob:';
 
-        // --- FIXED INITIALIZATION SEQUENCE ---
+        // --- ROBUST INITIALIZATION SEQUENCE ---
         async function initializeApp() {
             // 1. Fetch both config and log data in parallel.
-            const [config, log] = await Promise.all([
+            const [configResult, logResult] = await Promise.all([
                 fetchAppData(),
                 fetchInjuryLog()
             ]);
 
             // 2. If either fetch fails (and we're not local), stop.
-            if (!config || !log) {
+            if (!configResult || !logResult) {
                 console.error("App initialization failed: Could not load required data.");
                 return;
             }
 
             // 3. Assign the data to our state variables.
-            appData = config;
-            injuryLog = log;
+            appData = configResult;
+            injuryLog = logResult;
 
-            // 4. NOW that both data sources are loaded, check if a back-fill is needed.
-            await backfillInitialData();
+            // 4. Check if a back-fill is needed.
+            const needsBackfill = await backfillInitialData();
             
-            // 5. Set up all the button clicks and other interactions.
+            // 5. If data was back-filled, we MUST re-fetch the injury log to get the new data.
+            if (needsBackfill) {
+                injuryLog = await fetchInjuryLog();
+            }
+            
+            // 6. Set up all the button clicks and other interactions.
             setupEventListeners();
             
-            // 6. Finally, with all data present, render the grid for the first time.
+            // 7. Finally, with all data present, render the grid.
             renderGrid();
         }
 
@@ -136,10 +141,10 @@
                 console.error("Error fetching app config:", error);
                 if (isLocal) {
                     console.log("Local environment detected. Loading mock app config.");
-                    return loadMockAppData(); // Return mock data
+                    return loadMockAppData();
                 } else {
                     trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full">Could not load app configuration.</p>`;
-                    return null; // Return null on failure
+                    return null;
                 }
             }
         }
@@ -153,20 +158,20 @@
                 console.error("Error fetching injury log:", error);
                 if (isLocal) {
                     console.log("Local environment detected. Using empty injury log.");
-                    return {}; // Return empty object for local
+                    return {};
                 }
-                return null; // Return null on failure
+                return null;
             }
         }
         
         async function backfillInitialData() {
             if (isLocal) {
                 console.log("Skipping back-fill in local environment.");
-                return;
+                return false;
             }
 
             if (!appData.athletes || appData.athletes.length === 0) {
-                return;
+                return false;
             }
 
             const athletesWithNoData = appData.athletes.filter(athlete => 
@@ -175,7 +180,7 @@
 
             if (athletesWithNoData.length === 0) {
                 console.log("All athletes have existing data. No back-fill needed.");
-                return;
+                return false;
             }
 
             console.log("Back-filling data for new athletes:", athletesWithNoData.join(', '));
@@ -199,11 +204,9 @@
             if (backfillPayload.length > 0) {
                 console.log(`Sending batch update with ${backfillPayload.length} entries.`);
                 const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
-                if (result) {
-                    // Refresh log data after back-filling
-                    injuryLog = await fetchInjuryLog();
-                }
+                return result !== null; // Return true if the post was successful
             }
+            return false;
         }
 
         async function postData(endpoint, body) {
@@ -332,7 +335,7 @@
             if (newName && newName.trim()) {
                 const result = await postData('/.netlify/functions/injury-log', { action: 'addPlayer', name: newName.trim() });
                 if (result) {
-                    await initializeApp(); // Re-initialize the whole app to get new data and backfill
+                    await initializeApp();
                 }
             }
         }
@@ -344,7 +347,7 @@
                 if (confirmed) {
                     const result = await postData('/.netlify/functions/injury-log', { action: 'deletePlayer', name: nameToDelete.trim() });
                     if (result) {
-                        await initializeApp(); // Re-initialize to refresh all data
+                        await initializeApp();
                     }
                 }
             }
