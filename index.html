@@ -34,7 +34,10 @@
         </header>
 
         <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
-            <button id="add-player-btn" class="w-full sm:w-auto px-4 py-2 button-primary rounded-lg shadow">Add Player</button>
+            <div class="flex space-x-2 w-full sm:w-auto">
+                <button id="add-player-btn" class="w-1/2 sm:w-auto px-4 py-2 button-primary rounded-lg shadow">Add Player</button>
+                <button id="delete-player-btn" class="w-1/2 sm:w-auto px-4 py-2 bg-red-800 text-white rounded-lg shadow hover:bg-red-700">Delete Player</button>
+            </div>
             <div class="flex items-center space-x-2">
                 <button id="prev-week" class="px-4 py-2 button-primary rounded-lg shadow">&lt;</button>
                 <h2 id="date-range" class="text-lg sm:text-xl font-semibold text-center header-text w-48 sm:w-64"></h2>
@@ -82,6 +85,7 @@
         const nextWeekBtn = document.getElementById('next-week');
         const todayBtn = document.getElementById('today-btn');
         const addPlayerBtn = document.getElementById('add-player-btn');
+        const deletePlayerBtn = document.getElementById('delete-player-btn');
         const modal = document.getElementById('edit-modal');
         const modalTitle = document.getElementById('modal-title');
         const editForm = document.getElementById('edit-form');
@@ -97,6 +101,7 @@
         async function initializeApp() {
             await fetchAppData();
             await fetchInjuryLog();
+            await backfillInitialData();
             setupEventListeners();
         }
 
@@ -123,6 +128,44 @@
                 console.error("Error fetching injury log:", error);
             }
         }
+        
+        async function backfillInitialData() {
+            if (!appData.athletes || Object.keys(injuryLog).length === 0) return;
+
+            const athletesWithNoData = appData.athletes.filter(athlete => 
+                !Object.keys(injuryLog).some(key => key.startsWith(athlete))
+            );
+
+            if (athletesWithNoData.length === 0) return;
+
+            console.log("Back-filling data for new athletes:", athletesWithNoData.join(', '));
+
+            let backfillPayload = [];
+            const today = new Date();
+            for (const athlete of athletesWithNoData) {
+                for (let i = 0; i < 14; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - i);
+                    if (date >= seasonStartDate) {
+                        const key = `${athlete}-${toYYYYMMDD(date)}`;
+                        if (!injuryLog[key]) {
+                            backfillPayload.push({
+                                key,
+                                data: { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' }
+                            });
+                        }
+                    }
+                }
+            }
+            
+            if (backfillPayload.length > 0) {
+                const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
+                if (result) {
+                    await fetchInjuryLog(); // Refresh log after back-filling
+                }
+            }
+        }
+
 
         async function postData(endpoint, body) {
             try {
@@ -212,6 +255,7 @@
             nextWeekBtn.addEventListener('click', () => { currentEndDate.setDate(currentEndDate.getDate() + 14); renderGrid(); });
             todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
             addPlayerBtn.addEventListener('click', handleAddPlayer);
+            deletePlayerBtn.addEventListener('click', handleDeletePlayer);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             editForm.addEventListener('submit', handleFormSubmit);
             setAvailableBtn.addEventListener('click', handleSetAvailable);
@@ -231,7 +275,22 @@
             if (newName && newName.trim()) {
                 const result = await postData('/.netlify/functions/injury-log', { action: 'addPlayer', name: newName.trim() });
                 if (result) {
-                    await fetchAppData(); // Refresh the athlete list
+                    await fetchAppData();
+                    await backfillInitialData();
+                }
+            }
+        }
+
+        async function handleDeletePlayer() {
+            const nameToDelete = prompt(`Enter the full name of the player to delete from this list:\n\n${appData.athletes.join('\n')}`);
+            if (nameToDelete && nameToDelete.trim()) {
+                const confirmed = confirm(`Are you sure you want to permanently delete ${nameToDelete} and all their data? This cannot be undone.`);
+                if (confirmed) {
+                    const result = await postData('/.netlify/functions/injury-log', { action: 'deletePlayer', name: nameToDelete.trim() });
+                    if (result) {
+                        await fetchAppData();
+                        await fetchInjuryLog();
+                    }
                 }
             }
         }
