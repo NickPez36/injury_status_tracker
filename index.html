@@ -16,7 +16,11 @@
         .button-primary:disabled { background-color: #2d3748; color: #718096; cursor: not-allowed; }
         .grid-header { background-color: #2d3748; color: #a0aec0; }
         .athlete-name { background-color: #2d3748; color: #e2e8f0; }
-        .status-box { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .status-box { 
+            width: 100%;
+            height: 50px; /* This was the missing line */
+            transition: transform 0.2s ease, box-shadow 0.2s ease; 
+        }
         .status-box:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .modal-content { background-color: #2d3748; }
         .input-field { background-color: #1a202c; border-color: #4a5568; color: #e2e8f0; }
@@ -110,7 +114,6 @@
             debugPanel.scrollTop = debugPanel.scrollHeight;
         }
 
-        // --- FINAL ROBUST INITIALIZATION SEQUENCE ---
         async function initializeApp() {
             try {
                 logDebug("Initializing application...");
@@ -296,11 +299,6 @@
             const statusKey = statusData.status || "Unknown";
             const color = appData.colorMap[statusKey] || '#4a5568'; // Fallback color
             
-            // Detailed logging for the first athlete to help debug
-            if (appData.athletes.indexOf(athlete) === 0) {
-                logDebug(`Athlete: ${athlete}, Date: ${toYYYYMMDD(date)}, Status: '${statusKey}', Color: ${color}`);
-            }
-
             return `<div class="status-box rounded" 
                          style="background-color: ${color};"
                          data-athlete="${athlete}" 
