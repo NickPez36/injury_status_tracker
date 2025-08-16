@@ -1,120 +1,117 @@
-// This is the server-side code that will run on Netlify.
-// It handles reading and writing to the injury_log.csv file in your GitHub repo.
-
 const { Octokit } = require("@octokit/rest");
 
-// --- CONFIGURATION ---
-// These values are loaded from Netlify environment variables for security.
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_USER = process.env.GITHUB_USER;
-const GITHUB_REPO = process.env.GITHUB_REPO;
-const FILE_PATH = "data/injury_log.csv";
+const { GITHUB_TOKEN, GITHUB_USER, GITHUB_REPO } = process.env;
+const CONFIG_PATH = "data/app_info.csv";
+const LOG_PATH = "data/injury_log.csv";
 
-const octokit = new Octokit({ auth: GITHUB_TOKEN });
-
-// Main function handler
-exports.handler = async (event, context) => {
-    if (event.httpMethod === 'GET') {
-        return getInjuryData();
-    } else if (event.httpMethod === 'POST') {
-        return updateInjuryData(event);
-    }
-
-    return { statusCode: 405, body: "Method Not Allowed" };
-};
-
-// --- GET REQUEST HANDLER ---
-async function getInjuryData() {
+// Helper to get file content and SHA from GitHub
+async function getFile(octokit, path) {
     try {
-        const fileContent = await getFileFromGitHub();
-        const injuryLog = parseCsv(fileContent);
+        const { data } = await octokit.repos.getContent({ owner: GITHUB_USER, repo: GITHUB_REPO, path });
         return {
-            statusCode: 200,
-            body: JSON.stringify(injuryLog),
+            content: Buffer.from(data.content, 'base64').toString('utf8'),
+            sha: data.sha
         };
     } catch (error) {
-        // If the file doesn't exist (e.g., first run), return an empty object.
-        if (error.status === 404) {
-            return { statusCode: 200, body: JSON.stringify({}) };
-        }
-        console.error("Error fetching data:", error);
-        return { statusCode: 500, body: "Error fetching injury data." };
+        if (error.status === 404) return { content: '', sha: null };
+        throw error;
     }
 }
 
-// --- POST REQUEST HANDLER ---
-async function updateInjuryData(event) {
-    try {
-        const newData = JSON.parse(event.body);
-        const { key, ...statusData } = newData;
-
-        if (!key) {
-            return { statusCode: 400, body: "Missing 'key' in request body." };
-        }
-
-        const fileData = await getFileFromGitHub(true); // Get SHA as well
-        let injuryLog = parseCsv(fileData.content);
-
-        // Update the log in memory
-        injuryLog[key] = statusData;
-
-        const updatedCsvContent = convertLogToCsv(injuryLog);
-
-        // Commit the updated file back to GitHub
-        await octokit.repos.createOrUpdateFileContents({
-            owner: GITHUB_USER,
-            repo: GITHUB_REPO,
-            path: FILE_PATH,
-            message: `Update injury log for ${key} [skip ci]`,
-            content: Buffer.from(updatedCsvContent).toString('base64'),
-            sha: fileData.sha, // Must provide the SHA of the file being updated
-        });
-
-        return { statusCode: 200, body: "Update successful" };
-
-    } catch (error) {
-        console.error("Error updating data:", error);
-        return { statusCode: 500, body: "Error updating injury data." };
-    }
-}
-
-// --- GITHUB API HELPERS ---
-async function getFileFromGitHub(getSha = false) {
-    const { data } = await octokit.repos.getContent({
-        owner: GITHUB_USER,
-        repo: GITHUB_REPO,
-        path: FILE_PATH,
+// Helper to parse the main app_info.csv
+function parseAppConfig(csvText) {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    const headers = lines.shift().split(',').map(h => h.trim());
+    const data = lines.map(line => {
+        const values = line.split(',').map(v => v.trim());
+        let obj = {};
+        headers.forEach((h, i) => obj[h] = values[i]);
+        return obj;
     });
-    const content = Buffer.from(data.content, 'base64').toString('utf8');
-    return getSha ? { content, sha: data.sha } : content;
+    return {
+        athletes: [...new Set(data.map(item => item.AthleteName).filter(Boolean))].sort(),
+        injurySites: [...new Set(data.map(item => item.InjurySite).filter(Boolean))],
+        injuries: [...new Set(data.map(item => item.Injury).filter(Boolean))],
+        severities: [...new Set(data.map(item => item.Severity).filter(Boolean))],
+        statuses: [...new Set(data.map(item => item.Status).filter(Boolean))],
+        colorMap: data.reduce((acc, item) => {
+            if (item.Status && item.ColourCode) acc[item.Status] = item.ColourCode;
+            return acc;
+        }, {})
+    };
 }
 
-// --- CSV UTILITY FUNCTIONS ---
-function parseCsv(csvText) {
-    if (!csvText) return {};
-    const lines = csvText.split('\n').filter(line => line.trim() !== '');
-    const headers = lines.shift().split(',');
-    
+// Helper to parse the injury_log.csv
+function parseInjuryLog(csvText) {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length <= 1) return {};
+    lines.shift(); // remove header
     const log = {};
     lines.forEach(line => {
-        const values = line.split(',');
-        const key = values[0];
-        log[key] = {
-            status: values[1] || '',
-            injurySite: values[2] || '',
-            injury: values[3] || '',
-            severity: values[4] || '',
-            comment: values[5] || '',
-        };
+        const [key, status, injurySite, injury, severity, comment] = line.split(',');
+        if (key) log[key] = { status, injurySite, injury, severity, comment: comment || '' };
     });
     return log;
 }
 
-function convertLogToCsv(log) {
-    const headers = "key,status,injurySite,injury,severity,comment";
-    const rows = Object.entries(log).map(([key, data]) => {
-        return `${key},${data.status},${data.injurySite},${data.injury},${data.severity},${data.comment}`;
-    });
-    return [headers, ...rows].join('\n');
-}
+exports.handler = async (event) => {
+    if (!GITHUB_TOKEN || !GITHUB_USER || !GITHUB_REPO) {
+        return { statusCode: 500, body: JSON.stringify({ error: "Missing required environment variables." }) };
+    }
+    const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
+    // --- GET REQUESTS ---
+    if (event.httpMethod === 'GET') {
+        // If client asks for config, send parsed app_info.csv
+        if (event.queryStringParameters.config === 'true') {
+            const configFile = await getFile(octokit, CONFIG_PATH);
+            const appConfig = parseAppConfig(configFile.content);
+            return { statusCode: 200, body: JSON.stringify(appConfig) };
+        }
+        // Otherwise, send the injury log
+        const logFile = await getFile(octokit, LOG_PATH);
+        const injuryLog = parseInjuryLog(logFile.content);
+        return { statusCode: 200, body: JSON.stringify(injuryLog) };
+    }
+
+    // --- POST REQUESTS ---
+    if (event.httpMethod === 'POST') {
+        const body = JSON.parse(event.body);
+
+        // --- ADD PLAYER ACTION ---
+        if (body.action === 'addPlayer') {
+            const { name } = body;
+            const configFile = await getFile(octokit, CONFIG_PATH);
+            const newContent = `${configFile.content.trim()}\n${name},,,,,,\n`;
+            await octokit.repos.createOrUpdateFileContents({
+                owner: GITHUB_USER, repo: GITHUB_REPO, path: CONFIG_PATH,
+                message: `feat: Add player ${name} [skip ci]`,
+                content: Buffer.from(newContent).toString('base64'),
+                sha: configFile.sha
+            });
+            return { statusCode: 200, body: JSON.stringify({ message: "Player added" }) };
+        }
+
+        // --- UPDATE LOG ACTION ---
+        if (body.action === 'updateLog') {
+            const { key, data } = body;
+            const logFile = await getFile(octokit, LOG_PATH);
+            const injuryLog = parseInjuryLog(logFile.content);
+            injuryLog[key] = data;
+
+            const headers = "key,status,injurySite,injury,severity,comment";
+            const rows = Object.entries(injuryLog).map(([k, v]) => `${k},${v.status || ''},${v.injurySite || ''},${v.injury || ''},${v.severity || ''},${v.comment || ''}`);
+            const newContent = [headers, ...rows].join('\n');
+
+            await octokit.repos.createOrUpdateFileContents({
+                owner: GITHUB_USER, repo: GITHUB_REPO, path: LOG_PATH,
+                message: `Update injury log for ${key} [skip ci]`,
+                content: Buffer.from(newContent).toString('base64'),
+                sha: logFile.sha
+            });
+            return { statusCode: 200, body: JSON.stringify({ message: "Log updated" }) };
+        }
+    }
+
+    return { statusCode: 405, body: "Method Not Allowed" };
+};
