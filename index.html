@@ -101,15 +101,29 @@
 
         // --- FIXED INITIALIZATION SEQUENCE ---
         async function initializeApp() {
-            // 1. Fetch the app configuration and wait for it to complete.
-            await fetchAppData();
-            // 2. THEN, fetch the injury log and wait for it to complete.
-            await fetchInjuryLog();
-            // 3. NOW that both data sources are loaded, check if a back-fill is needed.
+            // 1. Fetch both config and log data in parallel.
+            const [config, log] = await Promise.all([
+                fetchAppData(),
+                fetchInjuryLog()
+            ]);
+
+            // 2. If either fetch fails (and we're not local), stop.
+            if (!config || !log) {
+                console.error("App initialization failed: Could not load required data.");
+                return;
+            }
+
+            // 3. Assign the data to our state variables.
+            appData = config;
+            injuryLog = log;
+
+            // 4. NOW that both data sources are loaded, check if a back-fill is needed.
             await backfillInitialData();
-            // 4. Set up all the button clicks and other interactions.
+            
+            // 5. Set up all the button clicks and other interactions.
             setupEventListeners();
-            // 5. Finally, with all data present, render the grid for the first time.
+            
+            // 6. Finally, with all data present, render the grid for the first time.
             renderGrid();
         }
 
@@ -117,14 +131,15 @@
             try {
                 const response = await fetch('/.netlify/functions/injury-log?config=true');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                appData = await response.json();
+                return await response.json();
             } catch (error) {
                 console.error("Error fetching app config:", error);
                 if (isLocal) {
                     console.log("Local environment detected. Loading mock app config.");
-                    loadMockAppData();
+                    return loadMockAppData(); // Return mock data
                 } else {
                     trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full">Could not load app configuration.</p>`;
+                    return null; // Return null on failure
                 }
             }
         }
@@ -133,13 +148,14 @@
             try {
                 const response = await fetch('/.netlify/functions/injury-log');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                injuryLog = await response.json();
+                return await response.json();
             } catch (error) {
                 console.error("Error fetching injury log:", error);
                 if (isLocal) {
                     console.log("Local environment detected. Using empty injury log.");
-                    injuryLog = {};
+                    return {}; // Return empty object for local
                 }
+                return null; // Return null on failure
             }
         }
         
@@ -184,8 +200,8 @@
                 console.log(`Sending batch update with ${backfillPayload.length} entries.`);
                 const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
                 if (result) {
-                    // After back-filling, we need to refresh the log data
-                    await fetchInjuryLog();
+                    // Refresh log data after back-filling
+                    injuryLog = await fetchInjuryLog();
                 }
             }
         }
@@ -214,7 +230,7 @@
         }
         
         function loadMockAppData() {
-            appData = {
+            return {
                 athletes: ["Bailey Sims", "Corey Hardy", "Cruz Martin", "Lachlan McNamara", "Lachlan Watt", "Luke Major", "Nick Perry", "Riley Martin", "Zach Taiba"],
                 injurySites: ["Knee", "Ankle", "Shoulder", "Groin", "Back", "Hamstring", "Foot", "Head"],
                 injuries: ["ACL Tear", "Sprain", "Dislocation", "Strain", "Pull"],
