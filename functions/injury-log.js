@@ -21,7 +21,7 @@ async function getFile(octokit, path) {
 // Helper to parse the main app_info.csv
 function parseAppConfig(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim());
-    const headers = lines.shift().split(',').map(h => h.trim());
+    const headers = lines.shift()?.split(',').map(h => h.trim()) || [];
     const data = lines.map(line => {
         const values = line.split(',').map(v => v.trim());
         let obj = {};
@@ -33,7 +33,7 @@ function parseAppConfig(csvText) {
         injurySites: [...new Set(data.map(item => item.InjurySite).filter(Boolean))],
         injuries: [...new Set(data.map(item => item.Injury).filter(Boolean))],
         severities: [...new Set(data.map(item => item.Severity).filter(Boolean))],
-        statuses: [...new Set(data.map(item => item.Status).filter(Boolean))],
+        statuses: [...new Set(data.map(item => item.Status).filter(Boolean).filter(s => s !== 'Pending'))],
         colorMap: data.reduce((acc, item) => {
             if (item.Status && item.ColourCode) acc[item.Status] = item.ColourCode;
             return acc;
@@ -54,6 +54,12 @@ function parseInjuryLog(csvText) {
     return log;
 }
 
+// Helper to convert an object to a CSV string
+function toCsv(data, headers) {
+    const rows = data.map(row => headers.map(header => row[header] || '').join(','));
+    return [headers.join(','), ...rows].join('\n');
+}
+
 exports.handler = async (event) => {
     if (!GITHUB_TOKEN || !GITHUB_USER || !GITHUB_REPO) {
         return { statusCode: 500, body: JSON.stringify({ error: "Missing required environment variables." }) };
@@ -62,13 +68,11 @@ exports.handler = async (event) => {
 
     // --- GET REQUESTS ---
     if (event.httpMethod === 'GET') {
-        // If client asks for config, send parsed app_info.csv
         if (event.queryStringParameters.config === 'true') {
             const configFile = await getFile(octokit, CONFIG_PATH);
             const appConfig = parseAppConfig(configFile.content);
             return { statusCode: 200, body: JSON.stringify(appConfig) };
         }
-        // Otherwise, send the injury log
         const logFile = await getFile(octokit, LOG_PATH);
         const injuryLog = parseInjuryLog(logFile.content);
         return { statusCode: 200, body: JSON.stringify(injuryLog) };
@@ -91,6 +95,59 @@ exports.handler = async (event) => {
             });
             return { statusCode: 200, body: JSON.stringify({ message: "Player added" }) };
         }
+
+        // --- DELETE PLAYER ACTION ---
+        if (body.action === 'deletePlayer') {
+            const { name } = body;
+            // Delete from config file
+            const configFile = await getFile(octokit, CONFIG_PATH);
+            const lines = configFile.content.split('\n').filter(line => line.trim());
+            const headers = lines.shift().split(',');
+            const updatedLines = lines.filter(line => line.split(',')[0].trim() !== name);
+            const newConfigContent = [headers.join(','), ...updatedLines].join('\n');
+            await octokit.repos.createOrUpdateFileContents({
+                owner: GITHUB_USER, repo: GITHUB_REPO, path: CONFIG_PATH,
+                message: `feat: Delete player ${name} [skip ci]`,
+                content: Buffer.from(newConfigContent).toString('base64'),
+                sha: configFile.sha
+            });
+
+            // Delete from log file
+            const logFile = await getFile(octokit, LOG_PATH);
+            const injuryLog = parseInjuryLog(logFile.content);
+            const updatedLog = Object.fromEntries(Object.entries(injuryLog).filter(([key]) => !key.startsWith(name)));
+            const logHeaders = "key,status,injurySite,injury,severity,comment";
+            const logRows = Object.entries(updatedLog).map(([k, v]) => `${k},${v.status || ''},${v.injurySite || ''},${v.injury || ''},${v.severity || ''},${v.comment || ''}`);
+            const newLogContent = [logHeaders, ...logRows].join('\n');
+            await octokit.repos.createOrUpdateFileContents({
+                owner: GITHUB_USER, repo: GITHUB_REPO, path: LOG_PATH,
+                message: `chore: Prune log data for deleted player ${name} [skip ci]`,
+                content: Buffer.from(newLogContent).toString('base64'),
+                sha: logFile.sha
+            });
+            return { statusCode: 200, body: JSON.stringify({ message: "Player deleted" }) };
+        }
+        
+        // --- BATCH UPDATE LOG ACTION (for back-filling) ---
+        if (body.action === 'batchUpdateLog') {
+            const { payload } = body;
+            const logFile = await getFile(octokit, LOG_PATH);
+            const injuryLog = parseInjuryLog(logFile.content);
+            payload.forEach(item => {
+                injuryLog[item.key] = item.data;
+            });
+            const headers = "key,status,injurySite,injury,severity,comment";
+            const rows = Object.entries(injuryLog).map(([k, v]) => `${k},${v.status || ''},${v.injurySite || ''},${v.injury || ''},${v.severity || ''},${v.comment || ''}`);
+            const newContent = [headers, ...rows].join('\n');
+            await octokit.repos.createOrUpdateFileContents({
+                owner: GITHUB_USER, repo: GITHUB_REPO, path: LOG_PATH,
+                message: `chore: Batch update for initial data back-fill [skip ci]`,
+                content: Buffer.from(newContent).toString('base64'),
+                sha: logFile.sha
+            });
+            return { statusCode: 200, body: JSON.stringify({ message: "Batch update successful" }) };
+        }
+
 
         // --- UPDATE LOG ACTION ---
         if (body.action === 'updateLog') {
