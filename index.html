@@ -97,30 +97,32 @@
         let injuryLog = {};
         let currentEndDate = new Date();
         const seasonStartDate = new Date('2025-01-01T00:00:00');
-        // A flag to check if we are in a local development environment (like the Canvas preview)
         const isLocal = window.location.protocol === 'blob:';
 
+        // --- FIXED INITIALIZATION SEQUENCE ---
         async function initializeApp() {
+            // 1. Fetch the app configuration and wait for it to complete.
             await fetchAppData();
+            // 2. THEN, fetch the injury log and wait for it to complete.
             await fetchInjuryLog();
+            // 3. NOW that both data sources are loaded, check if a back-fill is needed.
             await backfillInitialData();
+            // 4. Set up all the button clicks and other interactions.
             setupEventListeners();
+            // 5. Finally, with all data present, render the grid for the first time.
+            renderGrid();
         }
 
         async function fetchAppData() {
             try {
-                // In a local environment, the fetch will fail. We'll catch this and load mock data.
                 const response = await fetch('/.netlify/functions/injury-log?config=true');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
-                appData = data;
-                renderGrid();
+                appData = await response.json();
             } catch (error) {
                 console.error("Error fetching app config:", error);
                 if (isLocal) {
                     console.log("Local environment detected. Loading mock app config.");
-                    loadMockAppData(); // Load sample data for local preview
-                    renderGrid();
+                    loadMockAppData();
                 } else {
                     trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full">Could not load app configuration.</p>`;
                 }
@@ -132,13 +134,11 @@
                 const response = await fetch('/.netlify/functions/injury-log');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 injuryLog = await response.json();
-                renderGrid();
             } catch (error) {
                 console.error("Error fetching injury log:", error);
                 if (isLocal) {
                     console.log("Local environment detected. Using empty injury log.");
-                    injuryLog = {}; // Start with an empty log locally
-                    renderGrid();
+                    injuryLog = {};
                 }
             }
         }
@@ -146,11 +146,10 @@
         async function backfillInitialData() {
             if (isLocal) {
                 console.log("Skipping back-fill in local environment.");
-                return; // Don't try to backfill in the preview environment
+                return;
             }
 
             if (!appData.athletes || appData.athletes.length === 0) {
-                console.log("Waiting for app data before back-filling...");
                 return;
             }
 
@@ -185,6 +184,7 @@
                 console.log(`Sending batch update with ${backfillPayload.length} entries.`);
                 const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
                 if (result) {
+                    // After back-filling, we need to refresh the log data
                     await fetchInjuryLog();
                 }
             }
@@ -213,7 +213,6 @@
             }
         }
         
-        // --- MOCK DATA FOR LOCAL PREVIEW ---
         function loadMockAppData() {
             appData = {
                 athletes: ["Bailey Sims", "Corey Hardy", "Cruz Martin", "Lachlan McNamara", "Lachlan Watt", "Luke Major", "Nick Perry", "Riley Martin", "Zach Taiba"],
@@ -225,9 +224,11 @@
             };
         }
 
-
         function renderGrid() {
-            if (!appData.athletes) return;
+            if (!appData.athletes || appData.athletes.length === 0) {
+                trackerGrid.innerHTML = `<p class="text-gray-400 p-4 col-span-full text-center">Loading athlete data...</p>`;
+                return;
+            }
             trackerGrid.innerHTML = '';
             const dates = Array.from({ length: 14 }, (_, i) => {
                 const date = new Date(currentEndDate);
@@ -315,8 +316,7 @@
             if (newName && newName.trim()) {
                 const result = await postData('/.netlify/functions/injury-log', { action: 'addPlayer', name: newName.trim() });
                 if (result) {
-                    await fetchAppData();
-                    await backfillInitialData();
+                    await initializeApp(); // Re-initialize the whole app to get new data and backfill
                 }
             }
         }
@@ -328,8 +328,7 @@
                 if (confirmed) {
                     const result = await postData('/.netlify/functions/injury-log', { action: 'deletePlayer', name: nameToDelete.trim() });
                     if (result) {
-                        await fetchAppData();
-                        await fetchInjuryLog();
+                        await initializeApp(); // Re-initialize to refresh all data
                     }
                 }
             }
