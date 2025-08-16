@@ -101,35 +101,42 @@
 
         // --- ROBUST INITIALIZATION SEQUENCE ---
         async function initializeApp() {
-            // 1. Fetch both config and log data in parallel.
-            const [configResult, logResult] = await Promise.all([
-                fetchAppData(),
-                fetchInjuryLog()
-            ]);
+            try {
+                // 1. Fetch both config and log data in parallel.
+                const [configResult, logResult] = await Promise.all([
+                    fetchAppData(),
+                    fetchInjuryLog()
+                ]);
 
-            // 2. If either fetch fails (and we're not local), stop.
-            if (!configResult || !logResult) {
-                console.error("App initialization failed: Could not load required data.");
-                return;
+                // 2. If either fetch fails (and we're not local), stop.
+                if (!configResult || !logResult) {
+                    throw new Error("Could not load required app data.");
+                }
+
+                // 3. Assign the data to our state variables.
+                appData = configResult;
+                injuryLog = logResult;
+
+                // 4. Check if a back-fill is needed.
+                const wasBackfilled = await backfillInitialData();
+                
+                // 5. If data was back-filled, we MUST re-fetch the injury log to get the new data.
+                if (wasBackfilled) {
+                    const updatedLog = await fetchInjuryLog();
+                    if (updatedLog) {
+                        injuryLog = updatedLog;
+                    }
+                }
+                
+                // 6. Set up all the button clicks and other interactions.
+                setupEventListeners();
+                
+                // 7. Finally, with all data present, render the grid.
+                renderGrid();
+            } catch (error) {
+                console.error("App initialization failed:", error);
+                trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full text-center">A critical error occurred. Please check the console.</p>`;
             }
-
-            // 3. Assign the data to our state variables.
-            appData = configResult;
-            injuryLog = logResult;
-
-            // 4. Check if a back-fill is needed.
-            const wasBackfilled = await backfillInitialData();
-            
-            // 5. If data was back-filled, we MUST re-fetch the injury log to get the new data.
-            if (wasBackfilled) {
-                injuryLog = await fetchInjuryLog();
-            }
-            
-            // 6. Set up all the button clicks and other interactions.
-            setupEventListeners();
-            
-            // 7. Finally, with all data present, render the grid.
-            renderGrid();
         }
 
         async function fetchAppData() {
@@ -142,10 +149,8 @@
                 if (isLocal) {
                     console.log("Local environment detected. Loading mock app config.");
                     return loadMockAppData();
-                } else {
-                    trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full">Could not load app configuration.</p>`;
-                    return null;
                 }
+                return null;
             }
         }
 
@@ -165,23 +170,14 @@
         }
         
         async function backfillInitialData() {
-            if (isLocal) {
-                console.log("Skipping back-fill in local environment.");
-                return false;
-            }
-
-            if (!appData.athletes || appData.athletes.length === 0) {
-                return false;
-            }
+            if (isLocal) return false;
+            if (!appData.athletes || appData.athletes.length === 0) return false;
 
             const athletesWithNoData = appData.athletes.filter(athlete => 
                 !Object.keys(injuryLog).some(key => key.startsWith(athlete))
             );
 
-            if (athletesWithNoData.length === 0) {
-                console.log("All athletes have existing data. No back-fill needed.");
-                return false;
-            }
+            if (athletesWithNoData.length === 0) return false;
 
             console.log("Back-filling data for new athletes:", athletesWithNoData.join(', '));
 
@@ -204,7 +200,7 @@
             if (backfillPayload.length > 0) {
                 console.log(`Sending batch update with ${backfillPayload.length} entries.`);
                 const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
-                return result !== null; // Return true if the post was successful
+                return result !== null;
             }
             return false;
         }
