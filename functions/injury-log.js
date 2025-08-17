@@ -4,6 +4,7 @@ const { GITHUB_TOKEN, GITHUB_USER, GITHUB_REPO } = process.env;
 const CONFIG_PATH = "data/app_info.csv";
 const LOG_PATH = "data/injury_log.csv";
 const SEASON_DATES_PATH = "data/season_dates.csv";
+const SEASON_ROUNDS_PATH = "data/season_rounds.csv";
 
 async function getFile(octokit, path) {
     try {
@@ -40,11 +41,21 @@ function parseAppConfig(csvText) {
 function parseSeasonDates(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim());
     if (lines.length <= 1) return [];
-    lines.shift(); // Remove header
+    lines.shift();
     const periodColors = { "Pre-Season": "#3182CE", "In-Season": "#63B3ED", "Off-Season": "#718096" };
     return lines.map(line => {
         const [Year, Period, StartDate, EndDate] = line.split(',');
         return { Year, Period, StartDate, EndDate, Color: periodColors[Period] || "#A0AEC0" };
+    });
+}
+
+function parseSeasonRounds(csvText) {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length <= 1) return [];
+    lines.shift();
+    return lines.map(line => {
+        const [Year, Round, StartDate] = line.split(',');
+        return { Year, Round, StartDate };
     });
 }
 
@@ -68,12 +79,14 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'GET') {
         if (event.queryStringParameters.config === 'true') {
-            const [configFile, seasonFile] = await Promise.all([
+            const [configFile, seasonFile, roundsFile] = await Promise.all([
                 getFile(octokit, CONFIG_PATH),
-                getFile(octokit, SEASON_DATES_PATH)
+                getFile(octokit, SEASON_DATES_PATH),
+                getFile(octokit, SEASON_ROUNDS_PATH)
             ]);
             const appConfig = parseAppConfig(configFile.content);
             appConfig.seasonPeriods = parseSeasonDates(seasonFile.content);
+            appConfig.seasonRounds = parseSeasonRounds(roundsFile.content);
             return { statusCode: 200, body: JSON.stringify(appConfig) };
         }
         const logFile = await getFile(octokit, LOG_PATH);
@@ -83,6 +96,21 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'POST') {
         const body = JSON.parse(event.body);
+
+        if (body.action === 'updateSeasonRounds') {
+            const { rounds } = body;
+            const headers = "Year,Round,StartDate";
+            const rows = rounds.map(r => `${r.Year},${r.Round},${r.StartDate}`);
+            const newContent = [headers, ...rows].join('\n');
+            const roundsFile = await getFile(octokit, SEASON_ROUNDS_PATH);
+            await octokit.repos.createOrUpdateFileContents({
+                owner: GITHUB_USER, repo: GITHUB_REPO, path: SEASON_ROUNDS_PATH,
+                message: `chore: Update season rounds [skip ci]`,
+                content: Buffer.from(newContent).toString('base64'),
+                sha: roundsFile.sha
+            });
+            return { statusCode: 200, body: JSON.stringify({ message: "Season rounds updated" }) };
+        }
 
         if (body.action === 'updateSeasonDates') {
             const { seasons } = body;
