@@ -26,10 +26,10 @@
         .input-field { background-color: #1a202c; border-color: #4a5568; color: #e2e8f0; }
         .input-field:focus { border-color: #718096; ring-color: #718096; }
         .settings-date-input { width: 100%; padding: 8px; min-width: 150px; }
-        #tooltip { background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; z-index: 100; white-space: pre-wrap; max-width: 250px; }
+        #tooltip { background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; z-index: 110; white-space: pre-wrap; max-width: 250px; }
         #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
         #debug-panel { display: none; }
-        .modal { z-index: 50; }
+        .modal { z-index: 100; }
         .timeline { display: flex; height: 30px; background-color: #4a5568; border-radius: 8px; overflow: hidden; margin-bottom: 1px; }
         .timeline-segment { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tab-button { background-color: #4a5568; padding: 8px 16px; border-radius: 6px; }
@@ -108,7 +108,7 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
-        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-3xl">
+        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-4xl">
             <h3 class="text-2xl font-bold mb-4 header-text">Settings</h3>
             <div class="flex border-b border-gray-600 mb-4">
                 <button id="seasons-tab-btn" class="tab-button active">Seasons</button>
@@ -460,8 +460,18 @@
         }
 
         function setupEventListeners() {
-            prevWeekBtn.addEventListener('click', () => { currentEndDate.setDate(currentEndDate.getDate() - 14); renderGrid(); });
-            nextWeekBtn.addEventListener('click', () => { currentEndDate.setDate(currentEndDate.getDate() + 14); renderGrid(); });
+            prevWeekBtn.addEventListener('click', () => {
+                const newDate = new Date(currentEndDate);
+                newDate.setDate(newDate.getDate() - 14);
+                currentEndDate = newDate;
+                renderGrid();
+            });
+            nextWeekBtn.addEventListener('click', () => {
+                const newDate = new Date(currentEndDate);
+                newDate.setDate(newDate.getDate() + 14);
+                currentEndDate = newDate;
+                renderGrid();
+            });
             todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
             addPlayerBtn.addEventListener('click', handleAddPlayer);
             deletePlayerBtn.addEventListener('click', showDeletePlayerModal);
@@ -477,7 +487,7 @@
             roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
             yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
             roundsContainer.addEventListener('change', (e) => {
-                if (e.target.dataset.roundIndex === '0') { // Check if it's the Round 1 date picker
+                if (e.target.dataset.roundIndex === '0') {
                     autoFillRoundDates(e.target);
                 }
             });
@@ -693,11 +703,11 @@
         
         function autoFillRoundDates(round1Input) {
             const round1Date = new Date(round1Input.value);
-            if (isNaN(round1Date.getTime())) return; // Invalid date
+            if (isNaN(round1Date.getTime())) return;
 
             const allRoundInputs = document.getElementById('regular-rounds-dates').querySelectorAll('input[type="date"]');
             allRoundInputs.forEach((input, index) => {
-                if (index > 0) { // Skip Round 1 itself
+                if (index > 0) {
                     const nextDate = new Date(round1Date);
                     nextDate.setDate(nextDate.getDate() + (index * 7));
                     input.value = toYYYYMMDD(nextDate);
