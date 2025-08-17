@@ -277,36 +277,55 @@
             addBoxEventListeners();
         }
         
+        function getPeriodForDate(date) {
+            let currentPeriod = { Period: "Off-Season", Color: "#718096" }; // Default
+            if (!appData.seasonPeriods) return currentPeriod;
+            
+            for (const period of appData.seasonPeriods) {
+                // Create date objects at UTC midnight to avoid timezone issues
+                const periodStartDate = new Date(period.StartDate + 'T00:00:00Z');
+                const checkDate = new Date(date.toISOString().split('T')[0] + 'T00:00:00Z');
+
+                if (checkDate >= periodStartDate) {
+                    currentPeriod = period;
+                }
+            }
+            return currentPeriod;
+        }
+
         function renderSeasonTimeline(visibleDates) {
             seasonTimeline.innerHTML = '';
             if (!appData.seasonPeriods) return;
 
-            const periodMap = {};
+            let segments = [];
+            let currentSegment = null;
+
             visibleDates.forEach(date => {
-                const dateStr = toYYYYMMDD(date);
-                let currentPeriod = "Off-Season"; // Default
-                let periodColor = "#718096";
-
-                for (const period of appData.seasonPeriods) {
-                    if (date >= new Date(period.StartDate)) {
-                        currentPeriod = period.Period;
-                        periodColor = period.Color;
+                const period = getPeriodForDate(date);
+                if (!currentSegment || currentSegment.name !== period.Period) {
+                    if (currentSegment) {
+                        segments.push(currentSegment);
                     }
+                    currentSegment = { name: period.Period, count: 1, color: period.Color };
+                } else {
+                    currentSegment.count++;
                 }
-                if (!periodMap[currentPeriod]) {
-                    periodMap[currentPeriod] = { count: 0, color: periodColor };
-                }
-                periodMap[currentPeriod].count++;
             });
-
-            for (const [period, data] of Object.entries(periodMap)) {
-                const segment = document.createElement('div');
-                segment.className = 'timeline-segment';
-                segment.style.flexGrow = data.count;
-                segment.style.backgroundColor = data.color;
-                segment.textContent = period;
-                seasonTimeline.appendChild(segment);
+            if (currentSegment) {
+                segments.push(currentSegment);
             }
+
+            segments.forEach(seg => {
+                const segmentDiv = document.createElement('div');
+                segmentDiv.className = 'timeline-segment';
+                segmentDiv.style.flexGrow = seg.count;
+                segmentDiv.style.backgroundColor = seg.color;
+                // Only show text if the segment is wide enough
+                if (seg.count > 2) {
+                    segmentDiv.textContent = seg.name;
+                }
+                seasonTimeline.appendChild(segmentDiv);
+            });
         }
 
         function createStatusBox(athlete, date) {
