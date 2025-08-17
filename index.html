@@ -29,6 +29,8 @@
         #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
         #debug-panel { display: none; } /* Hide debug panel by default */
         .modal { z-index: 50; } /* Ensure modals are on top */
+        #season-timeline { display: flex; height: 30px; background-color: #4a5568; border-radius: 8px; overflow: hidden; margin-bottom: 1px; }
+        .timeline-segment { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         @media (max-width: 768px) { #tracker-grid { grid-template-columns: 80px repeat(14, minmax(30px, 1fr)); } .grid-header, .athlete-name { font-size: 0.7rem; padding: 0.5rem; } }
     </style>
 </head>
@@ -54,8 +56,13 @@
             </div>
         </div>
 
-        <div id="tracker-grid" class="overflow-x-auto container-bg rounded-lg shadow-lg">
-            <!-- Grid will be populated by JavaScript -->
+        <div class="overflow-x-auto container-bg rounded-lg shadow-lg">
+            <div class="pl-[121px]"> <!-- This aligns the timeline with the date columns -->
+                 <div id="season-timeline"></div>
+            </div>
+            <div id="tracker-grid">
+                <!-- Grid will be populated by JavaScript -->
+            </div>
         </div>
         
         <div id="debug-panel"></div>
@@ -120,6 +127,7 @@
         const deleteModal = document.getElementById('delete-modal');
         const deletePlayerList = document.getElementById('delete-player-list');
         const cancelDeleteBtn = document.getElementById('cancel-delete');
+        const seasonTimeline = document.getElementById('season-timeline');
 
         let appData = {};
         let injuryLog = {};
@@ -233,7 +241,12 @@
                 injuries: ["ACL Tear", "Sprain", "Dislocation", "Strain", "Pull"],
                 severities: ["High", "Medium", "Low"],
                 statuses: ["Out", "Modified", "Available"],
-                colorMap: { "Out": "#D32F2F", "Modified": "#FFC107", "Available": "#4CAF50", "Pending": "#4A5568" }
+                colorMap: { "Out": "#D32F2F", "Modified": "#FFC107", "Available": "#4CAF50", "Pending": "#4A5568" },
+                seasonPeriods: [
+                    { Period: "Pre-Season", StartDate: "2025-01-15", Color: "#3182CE" },
+                    { Period: "In-Season", StartDate: "2025-03-20", Color: "#63B3ED" },
+                    { Period: "Off-Season", StartDate: "2025-09-30", Color: "#718096" }
+                ]
             };
         }
 
@@ -249,6 +262,9 @@
             const today = new Date();
             today.setHours(0,0,0,0);
             todayBtn.classList.toggle('invisible', currentEndDate.toDateString() === today.toDateString());
+            
+            renderSeasonTimeline(dates);
+
             trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10 p-2">Athlete</div>`;
             dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
             appData.athletes.forEach(athlete => {
@@ -259,6 +275,38 @@
                 });
             });
             addBoxEventListeners();
+        }
+        
+        function renderSeasonTimeline(visibleDates) {
+            seasonTimeline.innerHTML = '';
+            if (!appData.seasonPeriods) return;
+
+            const periodMap = {};
+            visibleDates.forEach(date => {
+                const dateStr = toYYYYMMDD(date);
+                let currentPeriod = "Off-Season"; // Default
+                let periodColor = "#718096";
+
+                for (const period of appData.seasonPeriods) {
+                    if (date >= new Date(period.StartDate)) {
+                        currentPeriod = period.Period;
+                        periodColor = period.Color;
+                    }
+                }
+                if (!periodMap[currentPeriod]) {
+                    periodMap[currentPeriod] = { count: 0, color: periodColor };
+                }
+                periodMap[currentPeriod].count++;
+            });
+
+            for (const [period, data] of Object.entries(periodMap)) {
+                const segment = document.createElement('div');
+                segment.className = 'timeline-segment';
+                segment.style.flexGrow = data.count;
+                segment.style.backgroundColor = data.color;
+                segment.textContent = period;
+                seasonTimeline.appendChild(segment);
+            }
         }
 
         function createStatusBox(athlete, date) {
@@ -367,13 +415,10 @@
                 comment: document.getElementById('comment').value
             };
             
-            // This now returns the payload for the batch update
             const propagationPayload = await propagateStatusForward(athlete, date, newStatusData);
-            
             const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: propagationPayload });
             
             if (result) {
-                // Manually update the local log to reflect changes instantly
                 propagationPayload.forEach(item => { injuryLog[item.key] = item.data; });
                 renderGrid();
                 modal.classList.add('hidden');
@@ -382,19 +427,14 @@
 
         async function propagateStatusForward(athlete, startDateStr, statusData) {
             const payload = [];
-            // Add the primary change first
             payload.push({ key: `${athlete}-${startDateStr}`, data: statusData });
-
             const today = new Date(); today.setHours(0,0,0,0);
             const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-            
             let currentDate = new Date(startDateStr);
-            currentDate.setDate(currentDate.getDate() + 1); // Start from the next day
-
+            currentDate.setDate(currentDate.getDate() + 1);
             while (currentDate <= tomorrow) {
                 const key = `${athlete}-${toYYYYMMDD(currentDate)}`;
-                // Only overwrite if the status is different, to preserve future manual entries
-                if (!injuryLog[key] || injuryLog[key].status !== statusData.status) {
+                if (!injuryLog[key] || JSON.stringify(injuryLog[key]) !== JSON.stringify(statusData)) {
                      payload.push({ key, data: statusData });
                 }
                 currentDate.setDate(currentDate.getDate() + 1);
