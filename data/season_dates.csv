@@ -1,4 +1,4 @@
-﻿Period,StartDate
-Pre-Season,1/1/2025
-In-Season,26/3/2025
-Off-Season,30/9/2025
+Period,StartDate,EndDate
+Pre-Season,2025-01-01,2025-03-25
+In-Season,2025-03-26,2025-09-29
+Off-Season,2025-09-30,2025-11-1
