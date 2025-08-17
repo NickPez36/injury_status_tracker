@@ -3,22 +3,18 @@ const { Octokit } = require("@octokit/rest");
 const { GITHUB_TOKEN, GITHUB_USER, GITHUB_REPO } = process.env;
 const CONFIG_PATH = "data/app_info.csv";
 const LOG_PATH = "data/injury_log.csv";
+const SEASON_DATES_PATH = "data/season_dates.csv";
 
-// Helper to get file content and SHA from GitHub
 async function getFile(octokit, path) {
     try {
         const { data } = await octokit.repos.getContent({ owner: GITHUB_USER, repo: GITHUB_REPO, path });
-        return {
-            content: Buffer.from(data.content, 'base64').toString('utf8'),
-            sha: data.sha
-        };
+        return { content: Buffer.from(data.content, 'base64').toString('utf8'), sha: data.sha };
     } catch (error) {
         if (error.status === 404) return { content: '', sha: null };
         throw error;
     }
 }
 
-// Helper to parse the main app_info.csv
 function parseAppConfig(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim());
     const headers = lines.shift()?.split(',').map(h => h.trim()) || [];
@@ -41,23 +37,27 @@ function parseAppConfig(csvText) {
     };
 }
 
-// Helper to parse the injury_log.csv
+function parseSeasonDates(csvText) {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length <= 1) return [];
+    lines.shift();
+    const periodColors = { "Pre-Season": "#3182CE", "In-Season": "#63B3ED", "Off-Season": "#718096" };
+    return lines.map(line => {
+        const [Period, StartDate] = line.split(',');
+        return { Period, StartDate, Color: periodColors[Period] || "#A0AEC0" };
+    }).sort((a, b) => new Date(a.StartDate) - new Date(b.StartDate));
+}
+
 function parseInjuryLog(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim());
     if (lines.length <= 1) return {};
-    lines.shift(); // remove header
+    lines.shift();
     const log = {};
     lines.forEach(line => {
         const [key, status, injurySite, injury, severity, comment] = line.split(',');
-        if (key) log[key] = { status, injurySite, injury, severity, comment: comment || '' };
+        if (key) log[key] = { status, injurySite, injury, severity, comment: (comment || '').trim() };
     });
     return log;
-}
-
-// Helper to convert an object to a CSV string
-function toCsv(data, headers) {
-    const rows = data.map(row => headers.map(header => row[header] || '').join(','));
-    return [headers.join(','), ...rows].join('\n');
 }
 
 exports.handler = async (event) => {
@@ -66,11 +66,14 @@ exports.handler = async (event) => {
     }
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
-    // --- GET REQUESTS ---
     if (event.httpMethod === 'GET') {
         if (event.queryStringParameters.config === 'true') {
-            const configFile = await getFile(octokit, CONFIG_PATH);
+            const [configFile, seasonFile] = await Promise.all([
+                getFile(octokit, CONFIG_PATH),
+                getFile(octokit, SEASON_DATES_PATH)
+            ]);
             const appConfig = parseAppConfig(configFile.content);
+            appConfig.seasonPeriods = parseSeasonDates(seasonFile.content);
             return { statusCode: 200, body: JSON.stringify(appConfig) };
         }
         const logFile = await getFile(octokit, LOG_PATH);
@@ -78,11 +81,9 @@ exports.handler = async (event) => {
         return { statusCode: 200, body: JSON.stringify(injuryLog) };
     }
 
-    // --- POST REQUESTS ---
     if (event.httpMethod === 'POST') {
         const body = JSON.parse(event.body);
 
-        // --- ADD PLAYER ACTION ---
         if (body.action === 'addPlayer') {
             const { name } = body;
             const configFile = await getFile(octokit, CONFIG_PATH);
@@ -96,23 +97,18 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify({ message: "Player added" }) };
         }
 
-        // --- DELETE PLAYER ACTION ---
         if (body.action === 'deletePlayer') {
             const { name } = body;
-            // Delete from config file
             const configFile = await getFile(octokit, CONFIG_PATH);
-            const lines = configFile.content.split('\n').filter(line => line.trim());
-            const headers = lines.shift().split(',');
-            const updatedLines = lines.filter(line => line.split(',')[0].trim() !== name);
-            const newConfigContent = [headers.join(','), ...updatedLines].join('\n');
+            const configLines = configFile.content.split('\n');
+            const newConfigLines = configLines.filter(line => line.split(',')[0].trim() !== name);
             await octokit.repos.createOrUpdateFileContents({
                 owner: GITHUB_USER, repo: GITHUB_REPO, path: CONFIG_PATH,
                 message: `feat: Delete player ${name} [skip ci]`,
-                content: Buffer.from(newConfigContent).toString('base64'),
+                content: Buffer.from(newConfigLines.join('\n')).toString('base64'),
                 sha: configFile.sha
             });
 
-            // Delete from log file
             const logFile = await getFile(octokit, LOG_PATH);
             const injuryLog = parseInjuryLog(logFile.content);
             const updatedLog = Object.fromEntries(Object.entries(injuryLog).filter(([key]) => !key.startsWith(name)));
@@ -128,45 +124,21 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify({ message: "Player deleted" }) };
         }
         
-        // --- BATCH UPDATE LOG ACTION (for back-filling) ---
         if (body.action === 'batchUpdateLog') {
             const { payload } = body;
             const logFile = await getFile(octokit, LOG_PATH);
             const injuryLog = parseInjuryLog(logFile.content);
-            payload.forEach(item => {
-                injuryLog[item.key] = item.data;
-            });
+            payload.forEach(item => { injuryLog[item.key] = item.data; });
             const headers = "key,status,injurySite,injury,severity,comment";
             const rows = Object.entries(injuryLog).map(([k, v]) => `${k},${v.status || ''},${v.injurySite || ''},${v.injury || ''},${v.severity || ''},${v.comment || ''}`);
             const newContent = [headers, ...rows].join('\n');
             await octokit.repos.createOrUpdateFileContents({
                 owner: GITHUB_USER, repo: GITHUB_REPO, path: LOG_PATH,
-                message: `chore: Batch update for initial data back-fill [skip ci]`,
+                message: `chore: Batch update log [skip ci]`,
                 content: Buffer.from(newContent).toString('base64'),
                 sha: logFile.sha
             });
             return { statusCode: 200, body: JSON.stringify({ message: "Batch update successful" }) };
-        }
-
-
-        // --- UPDATE LOG ACTION ---
-        if (body.action === 'updateLog') {
-            const { key, data } = body;
-            const logFile = await getFile(octokit, LOG_PATH);
-            const injuryLog = parseInjuryLog(logFile.content);
-            injuryLog[key] = data;
-
-            const headers = "key,status,injurySite,injury,severity,comment";
-            const rows = Object.entries(injuryLog).map(([k, v]) => `${k},${v.status || ''},${v.injurySite || ''},${v.injury || ''},${v.severity || ''},${v.comment || ''}`);
-            const newContent = [headers, ...rows].join('\n');
-
-            await octokit.repos.createOrUpdateFileContents({
-                owner: GITHUB_USER, repo: GITHUB_REPO, path: LOG_PATH,
-                message: `Update injury log for ${key} [skip ci]`,
-                content: Buffer.from(newContent).toString('base64'),
-                sha: logFile.sha
-            });
-            return { statusCode: 200, body: JSON.stringify({ message: "Log updated" }) };
         }
     }
 
