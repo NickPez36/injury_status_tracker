@@ -672,6 +672,18 @@
             }
         }
         
+        function handleAddYear() {
+            const years = Object.keys(appData.seasonPeriods.reduce((acc, p) => ({...acc, [p.Year]: true }), {}));
+            const lastYear = Math.max(...years.map(Number));
+            const newYear = lastYear + 1;
+            
+            appData.seasonPeriods.push({ Year: newYear, Period: 'Pre-Season', StartDate: `${newYear}-01-01`, EndDate: `${newYear}-03-25`});
+            appData.seasonPeriods.push({ Year: newYear, Period: 'In-Season', StartDate: `${newYear}-03-26`, EndDate: `${newYear}-09-29`});
+            appData.seasonPeriods.push({ Year: newYear, Period: 'Off-Season', StartDate: `${newYear}-09-30`, EndDate: `${newYear}-12-31`});
+            
+            showSettingsModal(); // Re-render the modal with the new year
+        }
+
         async function handleSaveSettings() {
             // Save Seasons
             const seasonInputs = seasonDatesContainer.querySelectorAll('input[type="date"]');
