@@ -43,9 +43,9 @@ function parseSeasonDates(csvText) {
     lines.shift();
     const periodColors = { "Pre-Season": "#3182CE", "In-Season": "#63B3ED", "Off-Season": "#718096" };
     return lines.map(line => {
-        const [Period, StartDate] = line.split(',');
-        return { Period, StartDate, Color: periodColors[Period] || "#A0AEC0" };
-    }).sort((a, b) => new Date(a.StartDate) - new Date(b.StartDate));
+        const [Period, StartDate, EndDate] = line.split(',');
+        return { Period, StartDate, EndDate, Color: periodColors[Period] || "#A0AEC0" };
+    });
 }
 
 function parseInjuryLog(csvText) {
