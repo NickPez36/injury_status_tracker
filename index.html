@@ -18,7 +18,7 @@
         .athlete-name { background-color: #2d3748; color: #e2e8f0; }
         .status-box { 
             width: 100%;
-            height: 50px; /* This was the missing line */
+            height: 50px;
             transition: transform 0.2s ease, box-shadow 0.2s ease; 
         }
         .status-box:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
@@ -27,7 +27,8 @@
         .input-field:focus { border-color: #718096; ring-color: #718096; }
         #tooltip { background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; z-index: 100; white-space: pre-wrap; max-width: 250px; }
         #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
-        #debug-panel { font-family: monospace; font-size: 12px; background-color: #000; color: #0f0; padding: 10px; margin-top: 20px; border-radius: 8px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+        #debug-panel { display: none; } /* Hide debug panel by default */
+        .modal { z-index: 50; } /* Ensure modals are on top */
         @media (max-width: 768px) { #tracker-grid { grid-template-columns: 80px repeat(14, minmax(30px, 1fr)); } .grid-header, .athlete-name { font-size: 0.7rem; padding: 0.5rem; } }
     </style>
 </head>
@@ -43,24 +44,25 @@
                 <button id="add-player-btn" class="w-1/2 sm:w-auto px-4 py-2 button-primary rounded-lg shadow">Add Player</button>
                 <button id="delete-player-btn" class="w-1/2 sm:w-auto px-4 py-2 bg-red-800 text-white rounded-lg shadow hover:bg-red-700">Delete Player</button>
             </div>
-            <div class="flex items-center space-x-2">
+            <div class="flex-grow flex justify-center items-center space-x-2">
                 <button id="prev-week" class="px-4 py-2 button-primary rounded-lg shadow">&lt;</button>
                 <h2 id="date-range" class="text-lg sm:text-xl font-semibold text-center header-text w-48 sm:w-64"></h2>
                 <button id="next-week" class="px-4 py-2 button-primary rounded-lg shadow">&gt;</button>
             </div>
-            <button id="today-btn" class="w-full sm:w-auto px-4 py-2 button-primary rounded-lg shadow hidden">Today</button>
+            <div class="w-full sm:w-auto flex justify-end">
+                 <button id="today-btn" class="px-4 py-2 button-primary rounded-lg shadow invisible">Today</button>
+            </div>
         </div>
 
         <div id="tracker-grid" class="overflow-x-auto container-bg rounded-lg shadow-lg">
             <!-- Grid will be populated by JavaScript -->
         </div>
         
-        <!-- Debug Panel -->
         <div id="debug-panel"></div>
     </div>
 
     <!-- Edit Modal -->
-    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
+    <div id="edit-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
         <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-md">
             <h3 class="text-2xl font-bold mb-4 header-text" id="modal-title">Edit Status</h3>
             <form id="edit-form">
@@ -79,6 +81,20 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Delete Player Modal -->
+    <div id="delete-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-md">
+            <h3 class="text-2xl font-bold mb-4 header-text">Delete Player</h3>
+            <p class="secondary-text mb-4">Select a player to permanently delete them and all their associated data. This action cannot be undone.</p>
+            <div id="delete-player-list" class="space-y-2 max-h-64 overflow-y-auto mb-6">
+                <!-- Player list will be populated here -->
+            </div>
+            <div class="flex justify-end">
+                <button type="button" id="cancel-delete" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -101,6 +117,9 @@
         const setAvailableBtn = document.getElementById('set-available-btn');
         const tooltip = document.getElementById('tooltip');
         const debugPanel = document.getElementById('debug-panel');
+        const deleteModal = document.getElementById('delete-modal');
+        const deletePlayerList = document.getElementById('delete-player-list');
+        const cancelDeleteBtn = document.getElementById('cancel-delete');
 
         let appData = {};
         let injuryLog = {};
@@ -108,20 +127,14 @@
         const seasonStartDate = new Date('2025-01-01T00:00:00');
         const isLocal = window.location.protocol === 'blob:';
         
-        function logDebug(message) {
-            console.log(message);
-            debugPanel.textContent += `> ${message}\n`;
-            debugPanel.scrollTop = debugPanel.scrollHeight;
-        }
+        function logDebug(message) { console.log(message); debugPanel.textContent += `> ${message}\n`; debugPanel.scrollTop = debugPanel.scrollHeight; }
 
         async function initializeApp() {
             try {
                 logDebug("Initializing application...");
-                
                 appData = await fetchAppData();
                 if (!appData) throw new Error("Could not load app configuration.");
                 logDebug(`Loaded config for ${appData.athletes.length} athletes.`);
-                logDebug(`Color Map Loaded: ${JSON.stringify(appData.colorMap)}`);
 
                 injuryLog = await fetchInjuryLog();
                 if (injuryLog === null) throw new Error("Could not load injury log.");
@@ -156,10 +169,7 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return await response.json();
             } catch (error) {
-                if (isLocal) {
-                    logDebug("Local environment: Loading mock app config.");
-                    return loadMockAppData();
-                }
+                if (isLocal) { logDebug("Local environment: Loading mock app config."); return loadMockAppData(); }
                 logDebug(`Error fetching app config: ${error.message}`);
                 return null;
             }
@@ -171,10 +181,7 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return await response.json();
             } catch (error) {
-                if (isLocal) {
-                    logDebug("Local environment: Using empty injury log.");
-                    return {};
-                }
+                if (isLocal) { logDebug("Local environment: Using empty injury log."); return {}; }
                 logDebug(`Error fetching injury log: ${error.message}`);
                 return null;
             }
@@ -183,18 +190,9 @@
         async function backfillInitialData() {
             if (isLocal) return false;
             if (!appData.athletes || appData.athletes.length === 0) return false;
-
-            const athletesWithNoData = appData.athletes.filter(athlete => 
-                !Object.keys(injuryLog).some(key => key.startsWith(athlete))
-            );
-
-            if (athletesWithNoData.length === 0) {
-                logDebug("All athletes have existing data. No back-fill needed.");
-                return false;
-            }
-
+            const athletesWithNoData = appData.athletes.filter(athlete => !Object.keys(injuryLog).some(key => key.startsWith(athlete)));
+            if (athletesWithNoData.length === 0) { logDebug("All athletes have existing data. No back-fill needed."); return false; }
             logDebug(`Back-filling data for new athletes: ${athletesWithNoData.join(', ')}`);
-
             let backfillPayload = [];
             const today = new Date();
             for (const athlete of athletesWithNoData) {
@@ -203,14 +201,10 @@
                     date.setDate(today.getDate() - i);
                     if (date >= seasonStartDate) {
                         const key = `${athlete}-${toYYYYMMDD(date)}`;
-                        backfillPayload.push({
-                            key,
-                            data: { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' }
-                        });
+                        backfillPayload.push({ key, data: { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' } });
                     }
                 }
             }
-            
             if (backfillPayload.length > 0) {
                 logDebug(`Sending batch update with ${backfillPayload.length} entries.`);
                 const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
@@ -220,20 +214,10 @@
         }
 
         async function postData(endpoint, body) {
-            if (isLocal) {
-                alert("This action is disabled in the local preview. Please use the live Netlify URL to save data.");
-                return null;
-            }
+            if (isLocal) { alert("This action is disabled in the local preview."); return null; }
             try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || `HTTP error! status: ${response.status}`);
-                }
+                const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                if (!response.ok) { const err = await response.json(); throw new Error(err.error || `HTTP error! status: ${response.status}`); }
                 return await response.json();
             } catch (error) {
                 logDebug(`Error posting to ${endpoint}: ${error.message}`);
@@ -254,68 +238,42 @@
         }
 
         function renderGrid() {
-            logDebug("RenderGrid called...");
-            if (!appData.athletes || appData.athletes.length === 0) {
-                logDebug("RenderGrid aborted: No athlete data available.");
-                trackerGrid.innerHTML = `<p class="text-gray-400 p-4 col-span-full text-center">Loading athlete data...</p>`;
-                return;
-            }
+            if (!appData.athletes || appData.athletes.length === 0) { trackerGrid.innerHTML = `<p class="text-gray-400 p-4 col-span-full text-center">Loading athlete data...</p>`; return; }
             trackerGrid.innerHTML = '';
-            const dates = Array.from({ length: 14 }, (_, i) => {
-                const date = new Date(currentEndDate);
-                date.setDate(date.getDate() - (13 - i));
-                return date;
-            });
-
+            const dates = Array.from({ length: 14 }, (_, i) => { const date = new Date(currentEndDate); date.setDate(date.getDate() - (13 - i)); return date; });
             const startDate = dates[0];
             dateRangeEl.textContent = `${formatDateDisplay(startDate)} - ${formatDateDisplay(currentEndDate)}`;
-            
             const prevDateLimit = new Date(startDate);
             prevDateLimit.setDate(prevDateLimit.getDate() - 1);
             prevWeekBtn.disabled = prevDateLimit < seasonStartDate;
-
             const today = new Date();
             today.setHours(0,0,0,0);
-            todayBtn.classList.toggle('hidden', currentEndDate.toDateString() === today.toDateString());
-
+            todayBtn.classList.toggle('invisible', currentEndDate.toDateString() === today.toDateString());
             trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10 p-2">Athlete</div>`;
             dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
-
             appData.athletes.forEach(athlete => {
                 trackerGrid.innerHTML += `<div class="athlete-name sticky left-0 z-10 p-2">${athlete}</div>`;
                 dates.forEach((date) => {
-                    const cellContent = (date < seasonStartDate)
-                        ? `<div class="status-box" style="background-color: #1a202c; cursor: default;"></div>`
-                        : createStatusBox(athlete, date);
+                    const cellContent = (date < seasonStartDate) ? `<div class="status-box" style="background-color: #1a202c; cursor: default;"></div>` : createStatusBox(athlete, date);
                     trackerGrid.innerHTML += `<div class="p-1">${cellContent}</div>`;
                 });
             });
-            logDebug(`Rendered grid for ${appData.athletes.length} athletes.`);
             addBoxEventListeners();
         }
 
         function createStatusBox(athlete, date) {
             const statusData = getStatusForDate(athlete, date);
             const statusKey = statusData.status || "Unknown";
-            const color = appData.colorMap[statusKey] || '#4a5568'; // Fallback color
-            
-            return `<div class="status-box rounded" 
-                         style="background-color: ${color};"
-                         data-athlete="${athlete}" 
-                         data-date="${toYYYYMMDD(date)}"
-                         data-status='${JSON.stringify(statusData)}'>
-                    </div>`;
+            const color = appData.colorMap[statusKey] || '#4a5568';
+            return `<div class="status-box rounded" style="background-color: ${color};" data-athlete="${athlete}" data-date="${toYYYYMMDD(date)}" data-status='${JSON.stringify(statusData)}'></div>`;
         }
 
         function getStatusForDate(athlete, dateToDisplay) {
             const key = `${athlete}-${toYYYYMMDD(dateToDisplay)}`;
             if (injuryLog[key]) return injuryLog[key];
-
             const today = new Date(); today.setHours(0, 0, 0, 0);
             const displayDay = new Date(dateToDisplay); displayDay.setHours(0, 0, 0, 0);
-
             if (displayDay > today) return { status: 'Pending' };
-
             let previousDate = new Date(dateToDisplay);
             while (previousDate > seasonStartDate) {
                 previousDate.setDate(previousDate.getDate() - 1);
@@ -330,8 +288,9 @@
             nextWeekBtn.addEventListener('click', () => { currentEndDate.setDate(currentEndDate.getDate() + 14); renderGrid(); });
             todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
             addPlayerBtn.addEventListener('click', handleAddPlayer);
-            deletePlayerBtn.addEventListener('click', handleDeletePlayer);
+            deletePlayerBtn.addEventListener('click', showDeletePlayerModal);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
             editForm.addEventListener('submit', handleFormSubmit);
             setAvailableBtn.addEventListener('click', handleSetAvailable);
         }
@@ -349,42 +308,45 @@
             const newName = prompt("Enter the new player's full name:");
             if (newName && newName.trim()) {
                 const result = await postData('/.netlify/functions/injury-log', { action: 'addPlayer', name: newName.trim() });
-                if (result) {
-                    await initializeApp();
-                }
+                if (result) await initializeApp();
             }
         }
 
-        async function handleDeletePlayer() {
-            const nameToDelete = prompt(`Enter the full name of the player to delete from this list:\n\n${appData.athletes.join('\n')}`);
-            if (nameToDelete && nameToDelete.trim()) {
-                const confirmed = confirm(`Are you sure you want to permanently delete ${nameToDelete} and all their data? This cannot be undone.`);
-                if (confirmed) {
-                    const result = await postData('/.netlify/functions/injury-log', { action: 'deletePlayer', name: nameToDelete.trim() });
+        function showDeletePlayerModal() {
+            deletePlayerList.innerHTML = ''; // Clear previous list
+            appData.athletes.forEach(name => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-700';
+                playerDiv.innerHTML = `<span>${name}</span><button data-name="${name}" class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-500 delete-confirm-btn">Delete</button>`;
+                deletePlayerList.appendChild(playerDiv);
+            });
+            deleteModal.classList.remove('hidden');
+        }
+        
+        document.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-confirm-btn')) {
+                const nameToDelete = e.target.dataset.name;
+                if (confirm(`Are you sure you want to permanently delete ${nameToDelete}? This cannot be undone.`)) {
+                    const result = await postData('/.netlify/functions/injury-log', { action: 'deletePlayer', name: nameToDelete });
                     if (result) {
+                        deleteModal.classList.add('hidden');
                         await initializeApp();
                     }
                 }
             }
-        }
+        });
 
         function handleBoxDoubleClick(e) {
             const box = e.target;
             if (!box.dataset.status) return;
             const statusData = JSON.parse(box.dataset.status);
             if (statusData.status === 'Pending') return;
-            
             const today = new Date(); today.setHours(0,0,0,0);
             const boxDate = new Date(box.dataset.date);
-            if (boxDate > today) {
-                alert("You cannot log an injury for a future date.");
-                return;
-            }
-
+            if (boxDate > today) { alert("You cannot log an injury for a future date."); return; }
             modalTitle.textContent = `Update: ${box.dataset.athlete} on ${box.dataset.date}`;
             document.getElementById('edit-athlete-name').value = box.dataset.athlete;
             document.getElementById('edit-date').value = box.dataset.date;
-            
             populateSelect('injury-site', appData.injurySites, statusData.injurySite);
             populateSelect('injury', appData.injuries, statusData.injury);
             populateSelect('severity', appData.severities, statusData.severity);
@@ -397,7 +359,6 @@
             e.preventDefault();
             const athlete = document.getElementById('edit-athlete-name').value;
             const date = document.getElementById('edit-date').value;
-            const key = `${athlete}-${date}`;
             const newStatusData = {
                 status: document.getElementById('status').value,
                 injurySite: document.getElementById('injury-site').value,
@@ -405,12 +366,41 @@
                 severity: document.getElementById('severity').value,
                 comment: document.getElementById('comment').value
             };
-            const result = await postData('/.netlify/functions/injury-log', { action: 'updateLog', key, data: newStatusData });
+            
+            // This now returns the payload for the batch update
+            const propagationPayload = await propagateStatusForward(athlete, date, newStatusData);
+            
+            const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: propagationPayload });
+            
             if (result) {
-                injuryLog[key] = newStatusData;
+                // Manually update the local log to reflect changes instantly
+                propagationPayload.forEach(item => { injuryLog[item.key] = item.data; });
                 renderGrid();
                 modal.classList.add('hidden');
             }
+        }
+
+        async function propagateStatusForward(athlete, startDateStr, statusData) {
+            const payload = [];
+            // Add the primary change first
+            payload.push({ key: `${athlete}-${startDateStr}`, data: statusData });
+
+            const today = new Date(); today.setHours(0,0,0,0);
+            const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+            
+            let currentDate = new Date(startDateStr);
+            currentDate.setDate(currentDate.getDate() + 1); // Start from the next day
+
+            while (currentDate <= tomorrow) {
+                const key = `${athlete}-${toYYYYMMDD(currentDate)}`;
+                // Only overwrite if the status is different, to preserve future manual entries
+                if (!injuryLog[key] || injuryLog[key].status !== statusData.status) {
+                     payload.push({ key, data: statusData });
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            logDebug(`Created propagation payload with ${payload.length} items.`);
+            return payload;
         }
 
         function handleSetAvailable() {
