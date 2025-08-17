@@ -40,11 +40,11 @@ function parseAppConfig(csvText) {
 function parseSeasonDates(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim());
     if (lines.length <= 1) return [];
-    lines.shift();
+    lines.shift(); // Remove header
     const periodColors = { "Pre-Season": "#3182CE", "In-Season": "#63B3ED", "Off-Season": "#718096" };
     return lines.map(line => {
-        const [Period, StartDate, EndDate] = line.split(',');
-        return { Period, StartDate, EndDate, Color: periodColors[Period] || "#A0AEC0" };
+        const [Year, Period, StartDate, EndDate] = line.split(',');
+        return { Year, Period, StartDate, EndDate, Color: periodColors[Period] || "#A0AEC0" };
     });
 }
 
@@ -83,6 +83,21 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'POST') {
         const body = JSON.parse(event.body);
+
+        if (body.action === 'updateSeasonDates') {
+            const { seasons } = body;
+            const headers = "Year,Period,StartDate,EndDate";
+            const rows = seasons.map(s => `${s.Year},${s.Period},${s.StartDate},${s.EndDate}`);
+            const newContent = [headers, ...rows].join('\n');
+            const seasonFile = await getFile(octokit, SEASON_DATES_PATH);
+            await octokit.repos.createOrUpdateFileContents({
+                owner: GITHUB_USER, repo: GITHUB_REPO, path: SEASON_DATES_PATH,
+                message: `chore: Update season dates [skip ci]`,
+                content: Buffer.from(newContent).toString('base64'),
+                sha: seasonFile.sha
+            });
+            return { statusCode: 200, body: JSON.stringify({ message: "Season dates updated" }) };
+        }
 
         if (body.action === 'addPlayer') {
             const { name } = body;
