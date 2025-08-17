@@ -29,8 +29,10 @@
         #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
         #debug-panel { display: none; } /* Hide debug panel by default */
         .modal { z-index: 50; } /* Ensure modals are on top */
-        #season-timeline { display: flex; height: 30px; background-color: #4a5568; border-radius: 8px; overflow: hidden; margin-bottom: 1px; }
+        .timeline { display: flex; height: 30px; background-color: #4a5568; border-radius: 8px; overflow: hidden; margin-bottom: 1px; }
         .timeline-segment { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tab-button { background-color: #4a5568; padding: 8px 16px; border-radius: 6px; }
+        .tab-button.active { background-color: #718096; }
         @media (max-width: 768px) { #tracker-grid { grid-template-columns: 80px repeat(14, minmax(30px, 1fr)); } .grid-header, .athlete-name { font-size: 0.7rem; padding: 0.5rem; } }
     </style>
 </head>
@@ -58,12 +60,11 @@
         </div>
 
         <div class="overflow-x-auto container-bg rounded-lg shadow-lg">
-            <div class="pl-[121px]"> <!-- This aligns the timeline with the date columns -->
-                 <div id="season-timeline"></div>
+            <div class="pl-[121px]">
+                 <div id="season-timeline" class="timeline"></div>
+                 <div id="rounds-timeline" class="timeline mt-1"></div>
             </div>
-            <div id="tracker-grid">
-                <!-- Grid will be populated by JavaScript -->
-            </div>
+            <div id="tracker-grid"></div>
         </div>
         
         <div id="debug-panel"></div>
@@ -106,15 +107,30 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
-        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-2xl">
-            <h3 class="text-2xl font-bold mb-4 header-text">Season Settings</h3>
-            <div id="season-dates-container" class="space-y-4 max-h-96 overflow-y-auto mb-6"></div>
-            <div class="flex justify-between items-center mt-6">
-                <button type="button" id="add-year-btn" class="px-4 py-2 button-primary">Add New Year</button>
-                <div>
-                    <button type="button" id="cancel-settings" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Cancel</button>
-                    <button type="button" id="save-settings-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ml-3">Save Settings</button>
+        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-3xl">
+            <h3 class="text-2xl font-bold mb-4 header-text">Settings</h3>
+            <div class="flex border-b border-gray-600 mb-4">
+                <button id="seasons-tab-btn" class="tab-button active">Seasons</button>
+                <button id="rounds-tab-btn" class="tab-button">Rounds</button>
+            </div>
+            <!-- Seasons Tab -->
+            <div id="seasons-tab-content">
+                <div id="season-dates-container" class="space-y-4 max-h-96 overflow-y-auto mb-6"></div>
+                <div class="flex justify-between items-center mt-6">
+                    <button type="button" id="add-year-btn" class="px-4 py-2 button-primary">Add New Year</button>
                 </div>
+            </div>
+            <!-- Rounds Tab -->
+            <div id="rounds-tab-content" class="hidden">
+                <div class="flex items-center space-x-4 mb-4">
+                    <label for="year-select" class="secondary-text">Select Year:</label>
+                    <select id="year-select" class="input-field p-2 rounded"></select>
+                </div>
+                <div id="rounds-container" class="space-y-2 max-h-80 overflow-y-auto"></div>
+            </div>
+            <div class="flex justify-end items-center mt-6">
+                <button type="button" id="cancel-settings" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Cancel</button>
+                <button type="button" id="save-settings-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ml-3">Save Settings</button>
             </div>
         </div>
     </div>
@@ -143,8 +159,15 @@
         const deletePlayerList = document.getElementById('delete-player-list');
         const cancelDeleteBtn = document.getElementById('cancel-delete');
         const seasonTimeline = document.getElementById('season-timeline');
+        const roundsTimeline = document.getElementById('rounds-timeline');
         const settingsModal = document.getElementById('settings-modal');
+        const seasonsTabBtn = document.getElementById('seasons-tab-btn');
+        const roundsTabBtn = document.getElementById('rounds-tab-btn');
+        const seasonsTabContent = document.getElementById('seasons-tab-content');
+        const roundsTabContent = document.getElementById('rounds-tab-content');
         const seasonDatesContainer = document.getElementById('season-dates-container');
+        const roundsContainer = document.getElementById('rounds-container');
+        const yearSelect = document.getElementById('year-select');
         const addYearBtn = document.getElementById('add-year-btn');
         const cancelSettingsBtn = document.getElementById('cancel-settings');
         const saveSettingsBtn = document.getElementById('save-settings-btn');
@@ -266,6 +289,10 @@
                     { Year: "2025", Period: "Pre-Season", StartDate: "2025-01-01", EndDate: "2025-03-25", Color: "#3182CE" },
                     { Year: "2025", Period: "In-Season", StartDate: "2025-03-26", EndDate: "2025-09-29", Color: "#63B3ED" },
                     { Year: "2025", Period: "Off-Season", StartDate: "2025-09-30", EndDate: "2025-12-31", Color: "#718096" }
+                ],
+                seasonRounds: [
+                    { Year: "2025", Round: "Round 1", StartDate: "2025-03-24" },
+                    { Year: "2025", Round: "Grand Final", StartDate: "2025-09-22" }
                 ]
             };
         }
@@ -284,6 +311,7 @@
             todayBtn.classList.toggle('invisible', currentEndDate.toDateString() === today.toDateString());
             
             renderSeasonTimeline(dates);
+            renderRoundsTimeline(dates);
 
             trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10 p-2">Athlete</div>`;
             dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
@@ -342,6 +370,59 @@
             });
         }
 
+        function getRoundForDate(date) {
+            if (!appData.seasonRounds) return null;
+            const checkDate = new Date(date);
+            checkDate.setHours(0,0,0,0);
+
+            let currentRound = null;
+            for (const round of appData.seasonRounds) {
+                const roundStartDate = new Date(round.StartDate);
+                roundStartDate.setHours(0,0,0,0);
+                if (checkDate >= roundStartDate) {
+                    currentRound = round;
+                } else {
+                    break;
+                }
+            }
+            if (currentRound) {
+                const roundStartDate = new Date(currentRound.StartDate);
+                roundStartDate.setHours(0,0,0,0);
+                const diffDays = (checkDate - roundStartDate) / (1000 * 60 * 60 * 24);
+                if (diffDays < 7) {
+                    return currentRound;
+                }
+            }
+            return null;
+        }
+
+        function renderRoundsTimeline(visibleDates) {
+            roundsTimeline.innerHTML = '';
+            if (!appData.seasonRounds) return;
+            let segments = [];
+            let currentSegment = null;
+            visibleDates.forEach(date => {
+                const round = getRoundForDate(date);
+                const roundName = round ? round.Round : ' ';
+                if (!currentSegment || currentSegment.name !== roundName) {
+                    if (currentSegment) segments.push(currentSegment);
+                    currentSegment = { name: roundName, count: 1 };
+                } else {
+                    currentSegment.count++;
+                }
+            });
+            if (currentSegment) segments.push(currentSegment);
+            segments.forEach(seg => {
+                const segmentDiv = document.createElement('div');
+                segmentDiv.className = 'timeline-segment';
+                segmentDiv.style.flexGrow = seg.count;
+                segmentDiv.style.backgroundColor = seg.name.trim() ? '#A0AEC0' : 'transparent';
+                segmentDiv.style.color = '#1A202C';
+                if (seg.count > 1) segmentDiv.textContent = seg.name.replace(' ', '\u00A0');
+                roundsTimeline.appendChild(segmentDiv);
+            });
+        }
+
         function createStatusBox(athlete, date) {
             const statusData = getStatusForDate(athlete, date);
             const statusKey = statusData.status || "Unknown";
@@ -378,6 +459,15 @@
             setAvailableBtn.addEventListener('click', handleSetAvailable);
             addYearBtn.addEventListener('click', handleAddYear);
             saveSettingsBtn.addEventListener('click', handleSaveSettings);
+            seasonsTabBtn.addEventListener('click', () => switchTab('seasons'));
+            roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
+            yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
+            document.addEventListener('input', e => {
+                if (e.target.id === 'regular-rounds-input') updateRegularRoundsList();
+                if (e.target.type === 'checkbox' && e.target.id.startsWith('check-')) {
+                    e.target.nextElementSibling.nextElementSibling.disabled = !e.target.checked;
+                }
+            });
         }
 
         function addBoxEventListeners() {
@@ -497,7 +587,22 @@
             }
         }
 
+        function switchTab(activeTab) {
+            if (activeTab === 'seasons') {
+                seasonsTabBtn.classList.add('active');
+                roundsTabBtn.classList.remove('active');
+                seasonsTabContent.classList.remove('hidden');
+                roundsTabContent.classList.add('hidden');
+            } else {
+                seasonsTabBtn.classList.remove('active');
+                roundsTabBtn.classList.add('active');
+                seasonsTabContent.classList.add('hidden');
+                roundsTabContent.classList.remove('hidden');
+            }
+        }
+
         function showSettingsModal() {
+            // Seasons Tab
             seasonDatesContainer.innerHTML = '';
             const seasonsByYear = appData.seasonPeriods.reduce((acc, period) => {
                 const year = period.Year;
@@ -516,8 +621,8 @@
                         <div class="container-bg p-3 rounded-lg">
                             <label class="block text-sm font-medium secondary-text">${period.Period}</label>
                             <div class="flex space-x-2 mt-1">
-                                <input type="date" value="${period.StartDate}" class="input-field w-1/2 p-1 rounded" data-year="${year}" data-period="${period.Period}" data-type="start">
-                                <input type="date" value="${period.EndDate}" class="input-field w-1/2 p-1 rounded" data-year="${year}" data-period="${period.Period}" data-type="end">
+                                <input type="date" value="${period.StartDate}" class="input-field w-full p-2 rounded" data-year="${year}" data-period="${period.Period}" data-type="start">
+                                <input type="date" value="${period.EndDate}" class="input-field w-full p-2 rounded" data-year="${year}" data-period="${period.Period}" data-type="end">
                             </div>
                         </div>
                     `;
@@ -525,44 +630,91 @@
                 yearDiv.appendChild(periodsDiv);
                 seasonDatesContainer.appendChild(yearDiv);
             });
+
+            // Rounds Tab
+            const years = [...new Set(appData.seasonPeriods.map(p => p.Year))].sort();
+            yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+            yearSelect.value = new Date().getFullYear();
+            populateRoundsEditor(yearSelect.value);
+
             settingsModal.classList.remove('hidden');
         }
+        
+        function populateRoundsEditor(year) {
+            roundsContainer.innerHTML = '';
+            const roundsForYear = appData.seasonRounds.filter(r => r.Year == year);
+            const regularRoundsCount = roundsForYear.filter(r => r.Round.startsWith("Round")).length;
 
-        function handleAddYear() {
-            const years = Object.keys(appData.seasonPeriods.reduce((acc, p) => ({...acc, [p.Year]: true }), {}));
-            const lastYear = Math.max(...years.map(Number));
-            const newYear = lastYear + 1;
+            roundsContainer.innerHTML += `<div class="flex items-center space-x-2"><label class="secondary-text">Home & Away Rounds:</label><input type="number" id="regular-rounds-input" value="${regularRoundsCount}" min="0" max="30" class="input-field w-20 p-1 rounded"></div><div id="regular-rounds-dates" class="space-y-2 mt-2"></div>`;
             
-            appData.seasonPeriods.push({ Year: newYear, Period: 'Pre-Season', StartDate: `${newYear}-01-01`, EndDate: `${newYear}-03-25`});
-            appData.seasonPeriods.push({ Year: newYear, Period: 'In-Season', StartDate: `${newYear}-03-26`, EndDate: `${newYear}-09-29`});
-            appData.seasonPeriods.push({ Year: newYear, Period: 'Off-Season', StartDate: `${newYear}-09-30`, EndDate: `${newYear}-12-31`});
-            
-            showSettingsModal(); // Re-render the modal with the new year
+            const finals = ["Qualifying Final", "Semi-Final", "Preliminary Final", "Grand Final"];
+            roundsContainer.innerHTML += `<h4 class="text-md font-semibold header-text mt-4">Finals</h4>`;
+            const finalsDiv = document.createElement('div');
+            finalsDiv.className = 'space-y-2';
+            finals.forEach(finalName => {
+                const existingFinal = roundsForYear.find(r => r.Round === finalName);
+                finalsDiv.innerHTML += `<div class="flex items-center space-x-3"><input type="checkbox" id="check-${finalName.replace(' ','-')}" class="input-field h-5 w-5" ${existingFinal ? 'checked' : ''}><label for="check-${finalName.replace(' ','-')}" class="secondary-text w-40">${finalName}</label><input type="date" class="input-field p-1 rounded" value="${existingFinal ? existingFinal.StartDate : ''}" ${!existingFinal ? 'disabled' : ''}></div>`;
+            });
+            roundsContainer.appendChild(finalsDiv);
+            updateRegularRoundsList();
         }
-
+        
+        function updateRegularRoundsList() {
+            const count = document.getElementById('regular-rounds-input').value;
+            const container = document.getElementById('regular-rounds-dates');
+            const year = yearSelect.value;
+            const roundsForYear = appData.seasonRounds.filter(r => r.Year == year);
+            container.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                const roundName = `Round ${i}`;
+                const existingRound = roundsForYear.find(r => r.Round === roundName);
+                container.innerHTML += `<div class="flex items-center space-x-3 ml-4"><label class="secondary-text w-20">${roundName}</label><input type="date" class="input-field p-1 rounded" value="${existingRound ? existingRound.StartDate : ''}"></div>`;
+            }
+        }
+        
         async function handleSaveSettings() {
-            const inputs = seasonDatesContainer.querySelectorAll('input[type="date"]');
+            // Save Seasons
+            const seasonInputs = seasonDatesContainer.querySelectorAll('input[type="date"]');
             const newSeasons = [];
             const seasonsByYear = {};
-
-            inputs.forEach(input => {
+            seasonInputs.forEach(input => {
                 const { year, period, type } = input.dataset;
                 if (!seasonsByYear[year]) seasonsByYear[year] = {};
                 if (!seasonsByYear[year][period]) seasonsByYear[year][period] = { Year: year, Period: period };
                 if (type === 'start') seasonsByYear[year][period].StartDate = input.value;
                 if (type === 'end') seasonsByYear[year][period].EndDate = input.value;
             });
-
-            Object.values(seasonsByYear).forEach(yearData => {
-                Object.values(yearData).forEach(periodData => {
-                    newSeasons.push(periodData);
-                });
-            });
+            Object.values(seasonsByYear).forEach(yearData => { Object.values(yearData).forEach(periodData => { newSeasons.push(periodData); }); });
             
-            const result = await postData('/.netlify/functions/injury-log', { action: 'updateSeasonDates', seasons: newSeasons });
-            if (result) {
+            // Save Rounds
+            const year = yearSelect.value;
+            const newRounds = appData.seasonRounds.filter(r => r.Year != year);
+            const regularRoundsCount = document.getElementById('regular-rounds-input').value;
+            const regularRoundsInputs = document.getElementById('regular-rounds-dates').querySelectorAll('input[type="date"]');
+            for (let i = 0; i < regularRoundsCount; i++) {
+                if (regularRoundsInputs[i].value) {
+                    newRounds.push({ Year: year, Round: `Round ${i+1}`, StartDate: regularRoundsInputs[i].value });
+                }
+            }
+            const finalsCheckboxes = roundsContainer.querySelectorAll('input[type="checkbox"]');
+            finalsCheckboxes.forEach(cb => {
+                if (cb.checked) {
+                    const roundName = cb.nextElementSibling.textContent;
+                    const dateInput = cb.nextElementSibling.nextElementSibling;
+                    if (dateInput.value) {
+                        newRounds.push({ Year: year, Round: roundName, StartDate: dateInput.value });
+                    }
+                }
+            });
+
+            const [seasonResult, roundResult] = await Promise.all([
+                postData('/.netlify/functions/injury-log', { action: 'updateSeasonDates', seasons: newSeasons }),
+                postData('/.netlify/functions/injury-log', { action: 'updateSeasonRounds', rounds: newRounds })
+            ]);
+
+            if (seasonResult && roundResult) {
                 settingsModal.classList.add('hidden');
-                await initializeApp(); // Re-initialize to get new season dates
+                await initializeApp();
             }
         }
 
