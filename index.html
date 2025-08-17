@@ -37,8 +37,9 @@
 <body class="font-sans">
 
     <div class="container mx-auto p-2 sm:p-4">
-        <header class="text-center my-6">
+        <header class="text-center my-6 relative">
             <h1 class="text-3xl sm:text-4xl font-bold header-text">Athlete Injury Status Tracker</h1>
+            <button id="settings-btn" class="absolute top-0 right-0 px-4 py-2 button-primary rounded-lg shadow">Settings</button>
         </header>
 
         <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
@@ -96,11 +97,24 @@
         <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-md">
             <h3 class="text-2xl font-bold mb-4 header-text">Delete Player</h3>
             <p class="secondary-text mb-4">Select a player to permanently delete them and all their associated data. This action cannot be undone.</p>
-            <div id="delete-player-list" class="space-y-2 max-h-64 overflow-y-auto mb-6">
-                <!-- Player list will be populated here -->
-            </div>
+            <div id="delete-player-list" class="space-y-2 max-h-64 overflow-y-auto mb-6"></div>
             <div class="flex justify-end">
                 <button type="button" id="cancel-delete" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-2xl">
+            <h3 class="text-2xl font-bold mb-4 header-text">Season Settings</h3>
+            <div id="season-dates-container" class="space-y-4 max-h-96 overflow-y-auto mb-6"></div>
+            <div class="flex justify-between items-center mt-6">
+                <button type="button" id="add-year-btn" class="px-4 py-2 button-primary">Add New Year</button>
+                <div>
+                    <button type="button" id="cancel-settings" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Cancel</button>
+                    <button type="button" id="save-settings-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ml-3">Save Settings</button>
+                </div>
             </div>
         </div>
     </div>
@@ -117,6 +131,7 @@
         const todayBtn = document.getElementById('today-btn');
         const addPlayerBtn = document.getElementById('add-player-btn');
         const deletePlayerBtn = document.getElementById('delete-player-btn');
+        const settingsBtn = document.getElementById('settings-btn');
         const modal = document.getElementById('edit-modal');
         const modalTitle = document.getElementById('modal-title');
         const editForm = document.getElementById('edit-form');
@@ -128,6 +143,11 @@
         const deletePlayerList = document.getElementById('delete-player-list');
         const cancelDeleteBtn = document.getElementById('cancel-delete');
         const seasonTimeline = document.getElementById('season-timeline');
+        const settingsModal = document.getElementById('settings-modal');
+        const seasonDatesContainer = document.getElementById('season-dates-container');
+        const addYearBtn = document.getElementById('add-year-btn');
+        const cancelSettingsBtn = document.getElementById('cancel-settings');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
 
         let appData = {};
         let injuryLog = {};
@@ -243,9 +263,9 @@
                 statuses: ["Out", "Modified", "Available"],
                 colorMap: { "Out": "#D32F2F", "Modified": "#FFC107", "Available": "#4CAF50", "Pending": "#4A5568" },
                 seasonPeriods: [
-                    { Period: "Pre-Season", StartDate: "2025-01-01", EndDate: "2025-03-25", Color: "#3182CE" },
-                    { Period: "In-Season", StartDate: "2025-03-26", EndDate: "2025-09-29", Color: "#63B3ED" },
-                    { Period: "Off-Season", StartDate: "2025-09-30", EndDate: "2025-12-31", Color: "#718096" }
+                    { Year: "2025", Period: "Pre-Season", StartDate: "2025-01-01", EndDate: "2025-03-25", Color: "#3182CE" },
+                    { Year: "2025", Period: "In-Season", StartDate: "2025-03-26", EndDate: "2025-09-29", Color: "#63B3ED" },
+                    { Year: "2025", Period: "Off-Season", StartDate: "2025-09-30", EndDate: "2025-12-31", Color: "#718096" }
                 ]
             };
         }
@@ -300,10 +320,8 @@
         function renderSeasonTimeline(visibleDates) {
             seasonTimeline.innerHTML = '';
             if (!appData.seasonPeriods) return;
-
             let segments = [];
             let currentSegment = null;
-
             visibleDates.forEach(date => {
                 const period = getPeriodForDate(date);
                 if (!currentSegment || currentSegment.name !== period.Period) {
@@ -314,7 +332,6 @@
                 }
             });
             if (currentSegment) segments.push(currentSegment);
-
             segments.forEach(seg => {
                 const segmentDiv = document.createElement('div');
                 segmentDiv.className = 'timeline-segment';
@@ -353,10 +370,14 @@
             todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
             addPlayerBtn.addEventListener('click', handleAddPlayer);
             deletePlayerBtn.addEventListener('click', showDeletePlayerModal);
+            settingsBtn.addEventListener('click', showSettingsModal);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
+            cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
             editForm.addEventListener('submit', handleFormSubmit);
             setAvailableBtn.addEventListener('click', handleSetAvailable);
+            addYearBtn.addEventListener('click', handleAddYear);
+            saveSettingsBtn.addEventListener('click', handleSaveSettings);
         }
 
         function addBoxEventListeners() {
@@ -377,7 +398,7 @@
         }
 
         function showDeletePlayerModal() {
-            deletePlayerList.innerHTML = ''; // Clear previous list
+            deletePlayerList.innerHTML = '';
             appData.athletes.forEach(name => {
                 const playerDiv = document.createElement('div');
                 playerDiv.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-700';
@@ -473,6 +494,75 @@
             if (statusData.status && statusData.status !== 'Available' && statusData.status !== 'Pending') {
                 tooltip.textContent = `Status: ${statusData.status}\nInjury: ${statusData.injury || 'N/A'}\nSite: ${statusData.injurySite || 'N/A'}\nSeverity: ${statusData.severity || 'N/A'}\n\nComment: ${statusData.comment || 'None'}`;
                 tooltip.style.opacity = '1';
+            }
+        }
+
+        function showSettingsModal() {
+            seasonDatesContainer.innerHTML = '';
+            const seasonsByYear = appData.seasonPeriods.reduce((acc, period) => {
+                const year = period.Year;
+                if (!acc[year]) acc[year] = [];
+                acc[year].push(period);
+                return acc;
+            }, {});
+
+            Object.keys(seasonsByYear).sort().forEach(year => {
+                const yearDiv = document.createElement('div');
+                yearDiv.innerHTML = `<h4 class="text-lg font-semibold header-text mb-2">${year}</h4>`;
+                const periodsDiv = document.createElement('div');
+                periodsDiv.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
+                seasonsByYear[year].forEach(period => {
+                    periodsDiv.innerHTML += `
+                        <div class="container-bg p-3 rounded-lg">
+                            <label class="block text-sm font-medium secondary-text">${period.Period}</label>
+                            <div class="flex space-x-2 mt-1">
+                                <input type="date" value="${period.StartDate}" class="input-field w-1/2 p-1 rounded" data-year="${year}" data-period="${period.Period}" data-type="start">
+                                <input type="date" value="${period.EndDate}" class="input-field w-1/2 p-1 rounded" data-year="${year}" data-period="${period.Period}" data-type="end">
+                            </div>
+                        </div>
+                    `;
+                });
+                yearDiv.appendChild(periodsDiv);
+                seasonDatesContainer.appendChild(yearDiv);
+            });
+            settingsModal.classList.remove('hidden');
+        }
+
+        function handleAddYear() {
+            const years = Object.keys(appData.seasonPeriods.reduce((acc, p) => ({...acc, [p.Year]: true }), {}));
+            const lastYear = Math.max(...years.map(Number));
+            const newYear = lastYear + 1;
+            
+            appData.seasonPeriods.push({ Year: newYear, Period: 'Pre-Season', StartDate: `${newYear}-01-01`, EndDate: `${newYear}-03-25`});
+            appData.seasonPeriods.push({ Year: newYear, Period: 'In-Season', StartDate: `${newYear}-03-26`, EndDate: `${newYear}-09-29`});
+            appData.seasonPeriods.push({ Year: newYear, Period: 'Off-Season', StartDate: `${newYear}-09-30`, EndDate: `${newYear}-12-31`});
+            
+            showSettingsModal(); // Re-render the modal with the new year
+        }
+
+        async function handleSaveSettings() {
+            const inputs = seasonDatesContainer.querySelectorAll('input[type="date"]');
+            const newSeasons = [];
+            const seasonsByYear = {};
+
+            inputs.forEach(input => {
+                const { year, period, type } = input.dataset;
+                if (!seasonsByYear[year]) seasonsByYear[year] = {};
+                if (!seasonsByYear[year][period]) seasonsByYear[year][period] = { Year: year, Period: period };
+                if (type === 'start') seasonsByYear[year][period].StartDate = input.value;
+                if (type === 'end') seasonsByYear[year][period].EndDate = input.value;
+            });
+
+            Object.values(seasonsByYear).forEach(yearData => {
+                Object.values(yearData).forEach(periodData => {
+                    newSeasons.push(periodData);
+                });
+            });
+            
+            const result = await postData('/.netlify/functions/injury-log', { action: 'updateSeasonDates', seasons: newSeasons });
+            if (result) {
+                settingsModal.classList.add('hidden');
+                await initializeApp(); // Re-initialize to get new season dates
             }
         }
 
