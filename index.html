@@ -15,7 +15,7 @@
         .button-primary:hover { background-color: #718096; }
         .button-primary:disabled { background-color: #2d3748; color: #718096; cursor: not-allowed; }
         .grid-header { background-color: #2d3748; color: #a0aec0; }
-        .athlete-name { background-color: #2d3748; color: #e2e8f0; }
+        .athlete-name { background-color: #2d3748; color: #e2e8f0; position: sticky; left: 0; z-index: 10; }
         .status-box { 
             width: 100%;
             height: 50px;
@@ -25,10 +25,11 @@
         .modal-content { background-color: #2d3748; }
         .input-field { background-color: #1a202c; border-color: #4a5568; color: #e2e8f0; }
         .input-field:focus { border-color: #718096; ring-color: #718096; }
+        .settings-date-input { width: 100%; padding: 8px; }
         #tooltip { background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; z-index: 100; white-space: pre-wrap; max-width: 250px; }
         #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
-        #debug-panel { display: none; } /* Hide debug panel by default */
-        .modal { z-index: 50; } /* Ensure modals are on top */
+        #debug-panel { display: none; }
+        .modal { z-index: 50; }
         .timeline { display: flex; height: 30px; background-color: #4a5568; border-radius: 8px; overflow: hidden; margin-bottom: 1px; }
         .timeline-segment { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tab-button { background-color: #4a5568; padding: 8px 16px; border-radius: 6px; }
@@ -401,22 +402,35 @@
             if (!appData.seasonRounds) return;
             let segments = [];
             let currentSegment = null;
+            let colorIndex = 0;
+            const colors = ['#A0AEC0', '#718096'];
+
             visibleDates.forEach(date => {
                 const round = getRoundForDate(date);
                 const roundName = round ? round.Round : ' ';
                 if (!currentSegment || currentSegment.name !== roundName) {
+                    if (currentSegment && currentSegment.name.trim()) {
+                        currentSegment.color = colors[colorIndex % 2];
+                        colorIndex++;
+                    }
                     if (currentSegment) segments.push(currentSegment);
-                    currentSegment = { name: roundName, count: 1 };
+                    currentSegment = { name: roundName, count: 1, color: 'transparent' };
                 } else {
                     currentSegment.count++;
                 }
             });
-            if (currentSegment) segments.push(currentSegment);
+            if (currentSegment) {
+                 if (currentSegment.name.trim()) {
+                    currentSegment.color = colors[colorIndex % 2];
+                }
+                segments.push(currentSegment);
+            }
+
             segments.forEach(seg => {
                 const segmentDiv = document.createElement('div');
                 segmentDiv.className = 'timeline-segment';
                 segmentDiv.style.flexGrow = seg.count;
-                segmentDiv.style.backgroundColor = seg.name.trim() ? '#A0AEC0' : 'transparent';
+                segmentDiv.style.backgroundColor = seg.color;
                 segmentDiv.style.color = '#1A202C';
                 if (seg.count > 1) segmentDiv.textContent = seg.name.replace(' ', '\u00A0');
                 roundsTimeline.appendChild(segmentDiv);
@@ -462,6 +476,11 @@
             seasonsTabBtn.addEventListener('click', () => switchTab('seasons'));
             roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
             yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
+            roundsContainer.addEventListener('change', (e) => {
+                if (e.target.dataset.roundIndex === '0') { // Check if it's the Round 1 date picker
+                    autoFillRoundDates(e.target);
+                }
+            });
             document.addEventListener('input', e => {
                 if (e.target.id === 'regular-rounds-input') updateRegularRoundsList();
                 if (e.target.type === 'checkbox' && e.target.id.startsWith('check-')) {
@@ -621,8 +640,8 @@
                         <div class="container-bg p-3 rounded-lg">
                             <label class="block text-sm font-medium secondary-text">${period.Period}</label>
                             <div class="flex space-x-2 mt-1">
-                                <input type="date" value="${period.StartDate}" class="input-field w-full p-2 rounded" data-year="${year}" data-period="${period.Period}" data-type="start">
-                                <input type="date" value="${period.EndDate}" class="input-field w-full p-2 rounded" data-year="${year}" data-period="${period.Period}" data-type="end">
+                                <input type="date" value="${period.StartDate}" class="input-field settings-date-input rounded" data-year="${year}" data-period="${period.Period}" data-type="start">
+                                <input type="date" value="${period.EndDate}" class="input-field settings-date-input rounded" data-year="${year}" data-period="${period.Period}" data-type="end">
                             </div>
                         </div>
                     `;
@@ -653,7 +672,7 @@
             finalsDiv.className = 'space-y-2';
             finals.forEach(finalName => {
                 const existingFinal = roundsForYear.find(r => r.Round === finalName);
-                finalsDiv.innerHTML += `<div class="flex items-center space-x-3"><input type="checkbox" id="check-${finalName.replace(' ','-')}" class="input-field h-5 w-5" ${existingFinal ? 'checked' : ''}><label for="check-${finalName.replace(' ','-')}" class="secondary-text w-40">${finalName}</label><input type="date" class="input-field p-1 rounded" value="${existingFinal ? existingFinal.StartDate : ''}" ${!existingFinal ? 'disabled' : ''}></div>`;
+                finalsDiv.innerHTML += `<div class="flex items-center space-x-3"><input type="checkbox" id="check-${finalName.replace(/ /g,'-')}" class="input-field h-5 w-5" ${existingFinal ? 'checked' : ''}><label for="check-${finalName.replace(/ /g,'-')}" class="secondary-text w-40">${finalName}</label><input type="date" class="input-field p-1 rounded" value="${existingFinal ? existingFinal.StartDate : ''}" ${!existingFinal ? 'disabled' : ''}></div>`;
             });
             roundsContainer.appendChild(finalsDiv);
             updateRegularRoundsList();
@@ -665,13 +684,27 @@
             const year = yearSelect.value;
             const roundsForYear = appData.seasonRounds.filter(r => r.Year == year);
             container.innerHTML = '';
-            for (let i = 1; i <= count; i++) {
-                const roundName = `Round ${i}`;
+            for (let i = 0; i < count; i++) {
+                const roundName = `Round ${i + 1}`;
                 const existingRound = roundsForYear.find(r => r.Round === roundName);
-                container.innerHTML += `<div class="flex items-center space-x-3 ml-4"><label class="secondary-text w-20">${roundName}</label><input type="date" class="input-field p-1 rounded" value="${existingRound ? existingRound.StartDate : ''}"></div>`;
+                container.innerHTML += `<div class="flex items-center space-x-3 ml-4"><label class="secondary-text w-20">${roundName}</label><input type="date" class="input-field p-1 rounded" data-round-index="${i}" value="${existingRound ? existingRound.StartDate : ''}"></div>`;
             }
         }
         
+        function autoFillRoundDates(round1Input) {
+            const round1Date = new Date(round1Input.value);
+            if (isNaN(round1Date.getTime())) return; // Invalid date
+
+            const allRoundInputs = document.getElementById('regular-rounds-dates').querySelectorAll('input[type="date"]');
+            allRoundInputs.forEach((input, index) => {
+                if (index > 0) { // Skip Round 1 itself
+                    const nextDate = new Date(round1Date);
+                    nextDate.setDate(nextDate.getDate() + (index * 7));
+                    input.value = toYYYYMMDD(nextDate);
+                }
+            });
+        }
+
         function handleAddYear() {
             const years = Object.keys(appData.seasonPeriods.reduce((acc, p) => ({...acc, [p.Year]: true }), {}));
             const lastYear = Math.max(...years.map(Number));
@@ -681,7 +714,7 @@
             appData.seasonPeriods.push({ Year: newYear, Period: 'In-Season', StartDate: `${newYear}-03-26`, EndDate: `${newYear}-09-29`});
             appData.seasonPeriods.push({ Year: newYear, Period: 'Off-Season', StartDate: `${newYear}-09-30`, EndDate: `${newYear}-12-31`});
             
-            showSettingsModal(); // Re-render the modal with the new year
+            showSettingsModal();
         }
 
         async function handleSaveSettings() {
@@ -747,3 +780,4 @@
     </script>
 </body>
 </html>
+
