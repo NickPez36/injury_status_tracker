@@ -781,8 +781,48 @@
                 select.innerHTML += `<option value="${option}" ${isSelected}>${option}</option>`;
             });
         }
+        
+        // This is the one-time setup for all static event listeners
+        function setupStaticEventListeners() {
+            prevWeekBtn.addEventListener('click', () => {
+                currentEndDate.setDate(currentEndDate.getDate() - 14);
+                renderGrid();
+            });
+            nextWeekBtn.addEventListener('click', () => {
+                currentEndDate.setDate(currentEndDate.getDate() + 14);
+                renderGrid();
+            });
+            todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
+            addPlayerBtn.addEventListener('click', handleAddPlayer);
+            deletePlayerBtn.addEventListener('click', showDeletePlayerModal);
+            settingsBtn.addEventListener('click', showSettingsModal);
+            cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
+            cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+            editForm.addEventListener('submit', handleFormSubmit);
+            setAvailableBtn.addEventListener('click', handleSetAvailable);
+            addYearBtn.addEventListener('click', handleAddYear);
+            saveSettingsBtn.addEventListener('click', handleSaveSettings);
+            seasonsTabBtn.addEventListener('click', () => switchTab('seasons'));
+            roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
+            yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
+            roundsContainer.addEventListener('change', (e) => {
+                if (e.target.dataset.roundIndex === '0') {
+                    autoFillRoundDates(e.target);
+                }
+            });
+            document.addEventListener('input', e => {
+                if (e.target.id === 'regular-rounds-input') updateRegularRoundsList();
+                if (e.target.type === 'checkbox' && e.target.id.startsWith('check-')) {
+                    e.target.nextElementSibling.nextElementSibling.disabled = !e.target.checked;
+                }
+            });
+        }
 
+        // Run the initialization
         initializeApp();
+        // Set up static listeners once
+        setupStaticEventListeners();
     });
     </script>
 </body>
