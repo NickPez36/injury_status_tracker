@@ -196,815 +196,815 @@
     <div id="tooltip" class="absolute rounded-lg py-2 px-3 shadow-lg opacity-0 transition-opacity pointer-events-none"></div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const appContainer = document.getElementById('app-container');
-        const loginContainer = document.getElementById('login-container');
-        const userInfo = document.getElementById('user-info');
-        const trackerGrid = document.getElementById('tracker-grid');
-        const dateRangeEl = document.getElementById('date-range');
-        const prevWeekBtn = document.getElementById('prev-week');
-        const nextWeekBtn = document.getElementById('next-week');
-        const todayBtn = document.getElementById('today-btn');
-        const settingsBtn = document.getElementById('settings-btn');
-        const reportsBtn = document.getElementById('reports-btn');
-        const modal = document.getElementById('edit-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const editForm = document.getElementById('edit-form');
-        const cancelBtn = document.getElementById('cancel-edit');
-        const setAvailableBtn = document.getElementById('set-available-btn');
-        const tooltip = document.getElementById('tooltip');
-        const debugPanel = document.getElementById('debug-panel');
-        const deletePlayerList = document.getElementById('delete-player-list');
-        const seasonTimeline = document.getElementById('season-timeline');
-        const roundsTimeline = document.getElementById('rounds-timeline');
-        const settingsModal = document.getElementById('settings-modal');
-        const seasonsTabBtn = document.getElementById('seasons-tab-btn');
-        const roundsTabBtn = document.getElementById('rounds-tab-btn');
-        const playersTabBtn = document.getElementById('players-tab-btn');
-        const seasonsTabContent = document.getElementById('seasons-tab-content');
-        const roundsTabContent = document.getElementById('rounds-tab-content');
-        const playersTabContent = document.getElementById('players-tab-content');
-        const seasonDatesContainer = document.getElementById('season-dates-container');
-        const roundsContainer = document.getElementById('rounds-container');
-        const yearSelect = document.getElementById('year-select');
-        const addYearBtn = document.getElementById('add-year-btn');
-        const cancelSettingsBtn = document.getElementById('cancel-settings');
-        const saveSettingsBtn = document.getElementById('save-settings-btn');
-        const addPlayerBtn = document.getElementById('add-player-btn');
-        const newPlayerNameInput = document.getElementById('new-player-name');
-        const reportsModal = document.getElementById('reports-modal');
-        const cancelReportsBtn = document.getElementById('cancel-reports');
-        const reportYearSelect = document.getElementById('report-year-select');
-        const reportPeriodSelect = document.getElementById('report-period-select');
-        const reportTypeSelect = document.getElementById('report-type-select');
-        const athleteSelectorContainer = document.getElementById('athlete-selector-container');
-        const reportAthleteSelect = document.getElementById('report-athlete-select');
-        const reportContent = document.getElementById('report-content');
+    // --- Start of Script ---
+    const appContainer = document.getElementById('app-container');
+    const loginContainer = document.getElementById('login-container');
+    const userInfo = document.getElementById('user-info');
+    const trackerGrid = document.getElementById('tracker-grid');
+    const dateRangeEl = document.getElementById('date-range');
+    const prevWeekBtn = document.getElementById('prev-week');
+    const nextWeekBtn = document.getElementById('next-week');
+    const todayBtn = document.getElementById('today-btn');
+    const settingsBtn = document.getElementById('settings-btn');
+    const reportsBtn = document.getElementById('reports-btn');
+    const modal = document.getElementById('edit-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const editForm = document.getElementById('edit-form');
+    const cancelBtn = document.getElementById('cancel-edit');
+    const setAvailableBtn = document.getElementById('set-available-btn');
+    const tooltip = document.getElementById('tooltip');
+    const debugPanel = document.getElementById('debug-panel');
+    const deletePlayerList = document.getElementById('delete-player-list');
+    const seasonTimeline = document.getElementById('season-timeline');
+    const roundsTimeline = document.getElementById('rounds-timeline');
+    const settingsModal = document.getElementById('settings-modal');
+    const seasonsTabBtn = document.getElementById('seasons-tab-btn');
+    const roundsTabBtn = document.getElementById('rounds-tab-btn');
+    const playersTabBtn = document.getElementById('players-tab-btn');
+    const seasonsTabContent = document.getElementById('seasons-tab-content');
+    const roundsTabContent = document.getElementById('rounds-tab-content');
+    const playersTabContent = document.getElementById('players-tab-content');
+    const seasonDatesContainer = document.getElementById('season-dates-container');
+    const roundsContainer = document.getElementById('rounds-container');
+    const yearSelect = document.getElementById('year-select');
+    const addYearBtn = document.getElementById('add-year-btn');
+    const cancelSettingsBtn = document.getElementById('cancel-settings');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    const addPlayerBtn = document.getElementById('add-player-btn');
+    const newPlayerNameInput = document.getElementById('new-player-name');
+    const reportsModal = document.getElementById('reports-modal');
+    const cancelReportsBtn = document.getElementById('cancel-reports');
+    const reportYearSelect = document.getElementById('report-year-select');
+    const reportPeriodSelect = document.getElementById('report-period-select');
+    const reportTypeSelect = document.getElementById('report-type-select');
+    const athleteSelectorContainer = document.getElementById('athlete-selector-container');
+    const reportAthleteSelect = document.getElementById('report-athlete-select');
+    const reportContent = document.getElementById('report-content');
 
-        let appData = {};
-        let injuryLog = {};
-        let currentEndDate = new Date();
-        let currentUser = null;
-        let userRoles = [];
-        const seasonStartDate = new Date('2025-01-01T00:00:00');
-        const isLocal = window.location.protocol === 'blob:';
-        
-        function logDebug(message) { console.log(message); debugPanel.textContent += `> ${message}\n`; debugPanel.scrollTop = debugPanel.scrollHeight; }
+    let appData = {};
+    let injuryLog = {};
+    let currentEndDate = new Date();
+    let currentUser = null;
+    let userRoles = [];
+    const seasonStartDate = new Date('2025-01-01T00:00:00');
+    const isLocal = window.location.protocol === 'blob:';
+    
+    function logDebug(message) { console.log(message); debugPanel.textContent += `> ${message}\n`; debugPanel.scrollTop = debugPanel.scrollHeight; }
 
-        async function initializeApp() {
-            try {
-                logDebug("Initializing application...");
-                
-                appData = await fetchAppData();
-                if (!appData) throw new Error("Could not load app configuration.");
-                logDebug(`Loaded config for ${appData.athletes.length} athletes.`);
+    async function initializeApp() {
+        try {
+            logDebug("Initializing application...");
+            
+            appData = await fetchAppData();
+            if (!appData) throw new Error("Could not load app configuration.");
+            logDebug(`Loaded config for ${appData.athletes.length} athletes.`);
 
+            injuryLog = await fetchInjuryLog();
+            if (injuryLog === null) throw new Error("Could not load injury log.");
+            logDebug(`Loaded injury log with ${Object.keys(injuryLog).length} entries.`);
+            
+            renderGrid();
+            logDebug("Initial grid rendered.");
+
+            const wasBackfilled = await backfillInitialData();
+            
+            if (wasBackfilled) {
+                logDebug("Back-fill was performed. Re-fetching injury log...");
                 injuryLog = await fetchInjuryLog();
-                if (injuryLog === null) throw new Error("Could not load injury log.");
-                logDebug(`Loaded injury log with ${Object.keys(injuryLog).length} entries.`);
-                
-                renderGrid();
-                logDebug("Initial grid rendered.");
-
-                const wasBackfilled = await backfillInitialData();
-                
-                if (wasBackfilled) {
-                    logDebug("Back-fill was performed. Re-fetching injury log...");
-                    injuryLog = await fetchInjuryLog();
-                    if (injuryLog) {
-                        logDebug(`Re-fetched injury log with ${Object.keys(injuryLog).length} entries.`);
-                        renderGrid();
-                        logDebug("Grid re-rendered with back-filled data.");
-                    }
-                }
-                
-                updateUIVisibility();
-                logDebug("Application ready.");
-            } catch (error) {
-                logDebug(`CRITICAL ERROR: ${error.message}`);
-                trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full text-center">A critical error occurred. Please check the console.</p>`;
-            }
-        }
-
-        async function fetchAppData() {
-            try {
-                const response = await fetch('/.netlify/functions/injury-log?config=true', { headers: { Authorization: `Bearer ${currentUser.token.access_token}` } });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return await response.json();
-            } catch (error) {
-                if (isLocal) { logDebug("Local environment: Loading mock app config."); return loadMockAppData(); }
-                logDebug(`Error fetching app config: ${error.message}`);
-                return null;
-            }
-        }
-
-        async function fetchInjuryLog() {
-            try {
-                const response = await fetch('/.netlify/functions/injury-log', { headers: { Authorization: `Bearer ${currentUser.token.access_token}` } });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return await response.json();
-            } catch (error) {
-                if (isLocal) { logDebug("Local environment: Using empty injury log."); return {}; }
-                logDebug(`Error fetching injury log: ${error.message}`);
-                return null;
-            }
-        }
-        
-        async function backfillInitialData() {
-            if (isLocal) return false;
-            if (!appData.athletes || appData.athletes.length === 0) return false;
-            const athletesWithNoData = appData.athletes.filter(athlete => !Object.keys(injuryLog).some(key => key.startsWith(athlete)));
-            if (athletesWithNoData.length === 0) { logDebug("All athletes have existing data. No back-fill needed."); return false; }
-            logDebug(`Back-filling data for new athletes: ${athletesWithNoData.join(', ')}`);
-            let backfillPayload = [];
-            const today = new Date();
-            for (const athlete of athletesWithNoData) {
-                for (let i = 0; i < 14; i++) {
-                    const date = new Date(today);
-                    date.setDate(today.getDate() - i);
-                    if (date >= seasonStartDate) {
-                        const key = `${athlete}-${toYYYYMMDD(date)}`;
-                        backfillPayload.push({ key, data: { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' } });
-                    }
+                if (injuryLog) {
+                    logDebug(`Re-fetched injury log with ${Object.keys(injuryLog).length} entries.`);
+                    renderGrid();
+                    logDebug("Grid re-rendered with back-filled data.");
                 }
             }
-            if (backfillPayload.length > 0) {
-                logDebug(`Sending batch update with ${backfillPayload.length} entries.`);
-                const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
-                return result !== null;
-            }
-            return false;
-        }
-
-        async function postData(endpoint, body) {
-            if (isLocal) { alert("This action is disabled in the local preview."); return null; }
-            try {
-                const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token.access_token}` }, body: JSON.stringify(body) });
-                if (!response.ok) { const err = await response.json(); throw new Error(err.error || `HTTP error! status: ${response.status}`); }
-                return await response.json();
-            } catch (error) {
-                logDebug(`Error posting to ${endpoint}: ${error.message}`);
-                alert(`Failed to save update: ${error.message}`);
-                return null;
-            }
-        }
-        
-        function loadMockAppData() {
-            return {
-                athletes: ["Bailey Sims", "Corey Hardy", "Cruz Martin", "Lachlan McNamara", "Lachlan Watt", "Luke Major", "Nick Perry", "Riley Martin", "Zach Taiba"],
-                injurySites: ["Knee", "Ankle", "Shoulder", "Groin", "Back", "Hamstring", "Foot", "Head"],
-                injuries: ["ACL Tear", "Sprain", "Dislocation", "Strain", "Pull"],
-                severities: ["High", "Medium", "Low"],
-                statuses: ["Out", "Modified", "Available"],
-                colorMap: { "Out": "#D32F2F", "Modified": "#FFC107", "Available": "#4CAF50", "Pending": "#4A5568" },
-                seasonPeriods: [
-                    { Year: "2025", Period: "Pre-Season", StartDate: "2025-01-01", EndDate: "2025-03-25", Color: "#3182CE" },
-                    { Year: "2025", Period: "In-Season", StartDate: "2025-03-26", EndDate: "2025-09-29", Color: "#63B3ED" },
-                    { Year: "2025", Period: "Off-Season", StartDate: "2025-09-30", EndDate: "2025-12-31", Color: "#718096" }
-                ],
-                seasonRounds: [
-                    { Year: "2025", Round: "Round 1", StartDate: "2025-03-24" },
-                    { Year: "2025", Round: "Grand Final", StartDate: "2025-09-22" }
-                ]
-            };
-        }
-
-        function renderGrid() {
-            if (!appData.athletes || appData.athletes.length === 0) { trackerGrid.innerHTML = `<p class="text-gray-400 p-4 col-span-full text-center">Loading athlete data...</p>`; return; }
-            trackerGrid.innerHTML = '';
-            const dates = Array.from({ length: 14 }, (_, i) => { const date = new Date(currentEndDate); date.setDate(date.getDate() - (13 - i)); return date; });
-            const startDate = dates[0];
-            dateRangeEl.textContent = `${formatDateDisplay(startDate)} - ${formatDateDisplay(currentEndDate)}`;
-            const prevDateLimit = new Date(startDate);
-            prevDateLimit.setDate(prevDateLimit.getDate() - 1);
-            prevWeekBtn.disabled = prevDateLimit < seasonStartDate;
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            todayBtn.classList.toggle('invisible', currentEndDate.toDateString() === today.toDateString());
             
-            renderSeasonTimeline(dates);
-            renderRoundsTimeline(dates);
-
-            trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10 p-2">Athlete</div>`;
-            dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
-            appData.athletes.forEach(athlete => {
-                trackerGrid.innerHTML += `<div class="athlete-name sticky left-0 z-10 p-2">${athlete}</div>`;
-                dates.forEach((date) => {
-                    const cellContent = (date < seasonStartDate) ? `<div class="status-box" style="background-color: #1a202c; cursor: default;"></div>` : createStatusBox(athlete, date);
-                    trackerGrid.innerHTML += `<div class="p-1">${cellContent}</div>`;
-                });
-            });
-            addBoxEventListeners();
+            updateUIVisibility();
+            logDebug("Application ready.");
+        } catch (error) {
+            logDebug(`CRITICAL ERROR: ${error.message}`);
+            trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full text-center">A critical error occurred. Please check the console.</p>`;
         }
-        
-        function getPeriodForDate(date) {
-            const defaultPeriod = { Period: "Off-Season", Color: "#718096" };
-            if (!appData.seasonPeriods) return defaultPeriod;
-            
-            const checkDate = new Date(date);
-            checkDate.setHours(0,0,0,0);
+    }
 
-            for (const period of appData.seasonPeriods) {
-                const startDate = new Date(period.StartDate);
-                const endDate = new Date(period.EndDate);
-                startDate.setHours(0,0,0,0);
-                endDate.setHours(0,0,0,0);
-                
-                if (checkDate >= startDate && checkDate <= endDate) {
-                    return period;
-                }
-            }
-            return defaultPeriod;
-        }
-
-        function renderSeasonTimeline(visibleDates) {
-            seasonTimeline.innerHTML = '';
-            if (!appData.seasonPeriods) return;
-            let segments = [];
-            let currentSegment = null;
-            visibleDates.forEach(date => {
-                const period = getPeriodForDate(date);
-                if (!currentSegment || currentSegment.name !== period.Period) {
-                    if (currentSegment) segments.push(currentSegment);
-                    currentSegment = { name: period.Period, count: 1, color: period.Color };
-                } else {
-                    currentSegment.count++;
-                }
-            });
-            if (currentSegment) segments.push(currentSegment);
-            segments.forEach(seg => {
-                const segmentDiv = document.createElement('div');
-                segmentDiv.className = 'timeline-segment';
-                segmentDiv.style.flexGrow = seg.count;
-                segmentDiv.style.backgroundColor = seg.color;
-                if (seg.count > 2) segmentDiv.textContent = seg.name;
-                seasonTimeline.appendChild(segmentDiv);
-            });
-        }
-
-        function getRoundForDate(date) {
-            if (!appData.seasonRounds) return null;
-            const checkDate = new Date(date);
-            checkDate.setHours(0,0,0,0);
-
-            let currentRound = null;
-            for (const round of appData.seasonRounds) {
-                const roundStartDate = new Date(round.StartDate);
-                roundStartDate.setHours(0,0,0,0);
-                if (checkDate >= roundStartDate) {
-                    currentRound = round;
-                } else {
-                    break;
-                }
-            }
-            if (currentRound) {
-                const roundStartDate = new Date(currentRound.StartDate);
-                roundStartDate.setHours(0,0,0,0);
-                const diffDays = (checkDate - roundStartDate) / (1000 * 60 * 60 * 24);
-                if (diffDays < 7) {
-                    return currentRound;
-                }
-            }
+    async function fetchAppData() {
+        try {
+            const response = await fetch('/.netlify/functions/injury-log?config=true', { headers: { Authorization: `Bearer ${currentUser.token.access_token}` } });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            if (isLocal) { logDebug("Local environment: Loading mock app config."); return loadMockAppData(); }
+            logDebug(`Error fetching app config: ${error.message}`);
             return null;
         }
+    }
 
-        function renderRoundsTimeline(visibleDates) {
-            roundsTimeline.innerHTML = '';
-            if (!appData.seasonRounds) return;
-            let segments = [];
-            let currentSegment = null;
-            let colorIndex = 0;
-            const colors = ['#A0AEC0', '#718096'];
-
-            visibleDates.forEach(date => {
-                const round = getRoundForDate(date);
-                const roundName = round ? round.Round : ' ';
-                if (!currentSegment || currentSegment.name !== roundName) {
-                    if (currentSegment && currentSegment.name.trim()) {
-                        currentSegment.color = colors[colorIndex % 2];
-                        colorIndex++;
-                    }
-                    if (currentSegment) segments.push(currentSegment);
-                    currentSegment = { name: roundName, count: 1, color: 'transparent' };
-                } else {
-                    currentSegment.count++;
+    async function fetchInjuryLog() {
+        try {
+            const response = await fetch('/.netlify/functions/injury-log', { headers: { Authorization: `Bearer ${currentUser.token.access_token}` } });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            if (isLocal) { logDebug("Local environment: Using empty injury log."); return {}; }
+            logDebug(`Error fetching injury log: ${error.message}`);
+            return null;
+        }
+    }
+    
+    async function backfillInitialData() {
+        if (isLocal) return false;
+        if (!appData.athletes || appData.athletes.length === 0) return false;
+        const athletesWithNoData = appData.athletes.filter(athlete => !Object.keys(injuryLog).some(key => key.startsWith(athlete)));
+        if (athletesWithNoData.length === 0) { logDebug("All athletes have existing data. No back-fill needed."); return false; }
+        logDebug(`Back-filling data for new athletes: ${athletesWithNoData.join(', ')}`);
+        let backfillPayload = [];
+        const today = new Date();
+        for (const athlete of athletesWithNoData) {
+            for (let i = 0; i < 14; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                if (date >= seasonStartDate) {
+                    const key = `${athlete}-${toYYYYMMDD(date)}`;
+                    backfillPayload.push({ key, data: { status: 'Available', injurySite: '', injury: '', severity: '', comment: '' } });
                 }
+            }
+        }
+        if (backfillPayload.length > 0) {
+            logDebug(`Sending batch update with ${backfillPayload.length} entries.`);
+            const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: backfillPayload });
+            return result !== null;
+        }
+        return false;
+    }
+
+    async function postData(endpoint, body) {
+        if (isLocal) { alert("This action is disabled in the local preview."); return null; }
+        try {
+            const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token.access_token}` }, body: JSON.stringify(body) });
+            if (!response.ok) { const err = await response.json(); throw new Error(err.error || `HTTP error! status: ${response.status}`); }
+            return await response.json();
+        } catch (error) {
+            logDebug(`Error posting to ${endpoint}: ${error.message}`);
+            alert(`Failed to save update: ${error.message}`);
+            return null;
+        }
+    }
+    
+    function loadMockAppData() {
+        return {
+            athletes: ["Bailey Sims", "Corey Hardy", "Cruz Martin", "Lachlan McNamara", "Lachlan Watt", "Luke Major", "Nick Perry", "Riley Martin", "Zach Taiba"],
+            injurySites: ["Knee", "Ankle", "Shoulder", "Groin", "Back", "Hamstring", "Foot", "Head"],
+            injuries: ["ACL Tear", "Sprain", "Dislocation", "Strain", "Pull"],
+            severities: ["High", "Medium", "Low"],
+            statuses: ["Out", "Modified", "Available"],
+            colorMap: { "Out": "#D32F2F", "Modified": "#FFC107", "Available": "#4CAF50", "Pending": "#4A5568" },
+            seasonPeriods: [
+                { Year: "2025", Period: "Pre-Season", StartDate: "2025-01-01", EndDate: "2025-03-25", Color: "#3182CE" },
+                { Year: "2025", Period: "In-Season", StartDate: "2025-03-26", EndDate: "2025-09-29", Color: "#63B3ED" },
+                { Year: "2025", Period: "Off-Season", StartDate: "2025-09-30", EndDate: "2025-12-31", Color: "#718096" }
+            ],
+            seasonRounds: [
+                { Year: "2025", Round: "Round 1", StartDate: "2025-03-24" },
+                { Year: "2025", Round: "Grand Final", StartDate: "2025-09-22" }
+            ]
+        };
+    }
+
+    function renderGrid() {
+        if (!appData.athletes || appData.athletes.length === 0) { trackerGrid.innerHTML = `<p class="text-gray-400 p-4 col-span-full text-center">Loading athlete data...</p>`; return; }
+        trackerGrid.innerHTML = '';
+        const dates = Array.from({ length: 14 }, (_, i) => { const date = new Date(currentEndDate); date.setDate(date.getDate() - (13 - i)); return date; });
+        const startDate = dates[0];
+        dateRangeEl.textContent = `${formatDateDisplay(startDate)} - ${formatDateDisplay(currentEndDate)}`;
+        const prevDateLimit = new Date(startDate);
+        prevDateLimit.setDate(prevDateLimit.getDate() - 1);
+        prevWeekBtn.disabled = prevDateLimit < seasonStartDate;
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        todayBtn.classList.toggle('invisible', currentEndDate.toDateString() === today.toDateString());
+        
+        renderSeasonTimeline(dates);
+        renderRoundsTimeline(dates);
+
+        trackerGrid.innerHTML += `<div class="grid-header sticky left-0 z-10 p-2">Athlete</div>`;
+        dates.forEach(date => { trackerGrid.innerHTML += `<div class="grid-header">${formatDateHeader(date)}</div>`; });
+        appData.athletes.forEach(athlete => {
+            trackerGrid.innerHTML += `<div class="athlete-name sticky left-0 z-10 p-2">${athlete}</div>`;
+            dates.forEach((date) => {
+                const cellContent = (date < seasonStartDate) ? `<div class="status-box" style="background-color: #1a202c; cursor: default;"></div>` : createStatusBox(athlete, date);
+                trackerGrid.innerHTML += `<div class="p-1">${cellContent}</div>`;
             });
-            if (currentSegment) {
-                 if (currentSegment.name.trim()) {
+        });
+        addBoxEventListeners();
+    }
+    
+    function getPeriodForDate(date) {
+        const defaultPeriod = { Period: "Off-Season", Color: "#718096" };
+        if (!appData.seasonPeriods) return defaultPeriod;
+        
+        const checkDate = new Date(date);
+        checkDate.setHours(0,0,0,0);
+
+        for (const period of appData.seasonPeriods) {
+            const startDate = new Date(period.StartDate);
+            const endDate = new Date(period.EndDate);
+            startDate.setHours(0,0,0,0);
+            endDate.setHours(0,0,0,0);
+            
+            if (checkDate >= startDate && checkDate <= endDate) {
+                return period;
+            }
+        }
+        return defaultPeriod;
+    }
+
+    function renderSeasonTimeline(visibleDates) {
+        seasonTimeline.innerHTML = '';
+        if (!appData.seasonPeriods) return;
+        let segments = [];
+        let currentSegment = null;
+        visibleDates.forEach(date => {
+            const period = getPeriodForDate(date);
+            if (!currentSegment || currentSegment.name !== period.Period) {
+                if (currentSegment) segments.push(currentSegment);
+                currentSegment = { name: period.Period, count: 1, color: period.Color };
+            } else {
+                currentSegment.count++;
+            }
+        });
+        if (currentSegment) segments.push(currentSegment);
+        segments.forEach(seg => {
+            const segmentDiv = document.createElement('div');
+            segmentDiv.className = 'timeline-segment';
+            segmentDiv.style.flexGrow = seg.count;
+            segmentDiv.style.backgroundColor = seg.color;
+            if (seg.count > 2) segmentDiv.textContent = seg.name;
+            seasonTimeline.appendChild(segmentDiv);
+        });
+    }
+
+    function getRoundForDate(date) {
+        if (!appData.seasonRounds) return null;
+        const checkDate = new Date(date);
+        checkDate.setHours(0,0,0,0);
+
+        let currentRound = null;
+        for (const round of appData.seasonRounds) {
+            const roundStartDate = new Date(round.StartDate);
+            roundStartDate.setHours(0,0,0,0);
+            if (checkDate >= roundStartDate) {
+                currentRound = round;
+            } else {
+                break;
+            }
+        }
+        if (currentRound) {
+            const roundStartDate = new Date(currentRound.StartDate);
+            roundStartDate.setHours(0,0,0,0);
+            const diffDays = (checkDate - roundStartDate) / (1000 * 60 * 60 * 24);
+            if (diffDays < 7) {
+                return currentRound;
+            }
+        }
+        return null;
+    }
+
+    function renderRoundsTimeline(visibleDates) {
+        roundsTimeline.innerHTML = '';
+        if (!appData.seasonRounds) return;
+        let segments = [];
+        let currentSegment = null;
+        let colorIndex = 0;
+        const colors = ['#A0AEC0', '#718096'];
+
+        visibleDates.forEach(date => {
+            const round = getRoundForDate(date);
+            const roundName = round ? round.Round : ' ';
+            if (!currentSegment || currentSegment.name !== roundName) {
+                if (currentSegment && currentSegment.name.trim()) {
                     currentSegment.color = colors[colorIndex % 2];
+                    colorIndex++;
                 }
-                segments.push(currentSegment);
+                if (currentSegment) segments.push(currentSegment);
+                currentSegment = { name: roundName, count: 1, color: 'transparent' };
+            } else {
+                currentSegment.count++;
             }
-
-            segments.forEach(seg => {
-                const segmentDiv = document.createElement('div');
-                segmentDiv.className = 'timeline-segment';
-                segmentDiv.style.flexGrow = seg.count;
-                segmentDiv.style.backgroundColor = seg.color;
-                segmentDiv.style.color = '#1A202C';
-                if (seg.count > 1) segmentDiv.textContent = seg.name.replace(' ', '\u00A0');
-                roundsTimeline.appendChild(segmentDiv);
-            });
-        }
-
-        function createStatusBox(athlete, date) {
-            const statusData = getStatusForDate(athlete, date);
-            const statusKey = statusData.status || "Unknown";
-            const color = appData.colorMap[statusKey] || '#4a5568';
-            return `<div class="status-box rounded" style="background-color: ${color};" data-athlete="${athlete}" data-date="${toYYYYMMDD(date)}" data-status='${JSON.stringify(statusData)}'></div>`;
-        }
-
-        function getStatusForDate(athlete, dateToDisplay) {
-            const key = `${athlete}-${toYYYYMMDD(dateToDisplay)}`;
-            if (injuryLog[key]) return injuryLog[key];
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            const displayDay = new Date(dateToDisplay); displayDay.setHours(0, 0, 0, 0);
-            if (displayDay > today) return { status: 'Pending' };
-            let previousDate = new Date(dateToDisplay);
-            while (previousDate > seasonStartDate) {
-                previousDate.setDate(previousDate.getDate() - 1);
-                const prevKey = `${athlete}-${toYYYYMMDD(previousDate)}`;
-                if (injuryLog[prevKey]) return { ...injuryLog[prevKey] };
+        });
+        if (currentSegment) {
+             if (currentSegment.name.trim()) {
+                currentSegment.color = colors[colorIndex % 2];
             }
-            return { status: 'Available' };
+            segments.push(currentSegment);
         }
 
-        function setupEventListeners() {
-            prevWeekBtn.addEventListener('click', () => {
-                currentEndDate.setDate(currentEndDate.getDate() - 14);
-                renderGrid();
-            });
-            nextWeekBtn.addEventListener('click', () => {
-                currentEndDate.setDate(currentEndDate.getDate() + 14);
-                renderGrid();
-            });
-            todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
-            settingsBtn.addEventListener('click', showSettingsModal);
-            reportsBtn.addEventListener('click', showReportsModal);
-            cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-            cancelReportsBtn.addEventListener('click', () => reportsModal.classList.add('hidden'));
-            editForm.addEventListener('submit', handleFormSubmit);
-            setAvailableBtn.addEventListener('click', handleSetAvailable);
-            addYearBtn.addEventListener('click', handleAddYear);
-            saveSettingsBtn.addEventListener('click', handleSaveSettings);
-            seasonsTabBtn.addEventListener('click', () => switchTab('seasons'));
-            roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
-            playersTabBtn.addEventListener('click', () => switchTab('players'));
-            yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
-            reportYearSelect.addEventListener('change', generateReport);
-            reportPeriodSelect.addEventListener('change', generateReport);
-            reportTypeSelect.addEventListener('change', generateReport);
-            reportAthleteSelect.addEventListener('change', generateReport);
-            roundsContainer.addEventListener('change', (e) => {
-                if (e.target.dataset.roundIndex === '0') {
-                    autoFillRoundDates(e.target);
-                }
-            });
-            document.addEventListener('input', e => {
-                if (e.target.id === 'regular-rounds-input') updateRegularRoundsList();
-                if (e.target.type === 'checkbox' && e.target.id.startsWith('check-')) {
-                    e.target.nextElementSibling.nextElementSibling.disabled = !e.target.checked;
-                }
-            });
-            addPlayerBtn.addEventListener('click', handleAddPlayer);
-        }
+        segments.forEach(seg => {
+            const segmentDiv = document.createElement('div');
+            segmentDiv.className = 'timeline-segment';
+            segmentDiv.style.flexGrow = seg.count;
+            segmentDiv.style.backgroundColor = seg.color;
+            segmentDiv.style.color = '#1A202C';
+            if (seg.count > 1) segmentDiv.textContent = seg.name.replace(' ', '\u00A0');
+            roundsTimeline.appendChild(segmentDiv);
+        });
+    }
 
-        function addBoxEventListeners() {
-            document.querySelectorAll('.status-box').forEach(box => {
-                box.addEventListener('dblclick', handleBoxDoubleClick);
-                box.addEventListener('mouseover', handleMouseOver);
-                box.addEventListener('mouseout', () => tooltip.style.opacity = '0');
-                box.addEventListener('mousemove', e => { tooltip.style.left = `${e.pageX + 15}px`; tooltip.style.top = `${e.pageY + 15}px`; });
-            });
-        }
+    function createStatusBox(athlete, date) {
+        const statusData = getStatusForDate(athlete, date);
+        const statusKey = statusData.status || "Unknown";
+        const color = appData.colorMap[statusKey] || '#4a5568';
+        return `<div class="status-box rounded" style="background-color: ${color};" data-athlete="${athlete}" data-date="${toYYYYMMDD(date)}" data-status='${JSON.stringify(statusData)}'></div>`;
+    }
 
-        async function handleAddPlayer() {
-            const newName = newPlayerNameInput.value;
-            if (newName && newName.trim()) {
-                const result = await postData('/.netlify/functions/injury-log', { action: 'addPlayer', name: newName.trim() });
+    function getStatusForDate(athlete, dateToDisplay) {
+        const key = `${athlete}-${toYYYYMMDD(dateToDisplay)}`;
+        if (injuryLog[key]) return injuryLog[key];
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const displayDay = new Date(dateToDisplay); displayDay.setHours(0, 0, 0, 0);
+        if (displayDay > today) return { status: 'Pending' };
+        let previousDate = new Date(dateToDisplay);
+        while (previousDate > seasonStartDate) {
+            previousDate.setDate(previousDate.getDate() - 1);
+            const prevKey = `${athlete}-${toYYYYMMDD(previousDate)}`;
+            if (injuryLog[prevKey]) return { ...injuryLog[prevKey] };
+        }
+        return { status: 'Available' };
+    }
+
+    function setupEventListeners() {
+        prevWeekBtn.addEventListener('click', () => {
+            currentEndDate.setDate(currentEndDate.getDate() - 14);
+            renderGrid();
+        });
+        nextWeekBtn.addEventListener('click', () => {
+            currentEndDate.setDate(currentEndDate.getDate() + 14);
+            renderGrid();
+        });
+        todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
+        settingsBtn.addEventListener('click', showSettingsModal);
+        reportsBtn.addEventListener('click', showReportsModal);
+        cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+        cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+        cancelReportsBtn.addEventListener('click', () => reportsModal.classList.add('hidden'));
+        editForm.addEventListener('submit', handleFormSubmit);
+        setAvailableBtn.addEventListener('click', handleSetAvailable);
+        addYearBtn.addEventListener('click', handleAddYear);
+        saveSettingsBtn.addEventListener('click', handleSaveSettings);
+        seasonsTabBtn.addEventListener('click', () => switchTab('seasons'));
+        roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
+        playersTabBtn.addEventListener('click', () => switchTab('players'));
+        yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
+        reportYearSelect.addEventListener('change', generateReport);
+        reportPeriodSelect.addEventListener('change', generateReport);
+        reportTypeSelect.addEventListener('change', generateReport);
+        reportAthleteSelect.addEventListener('change', generateReport);
+        roundsContainer.addEventListener('change', (e) => {
+            if (e.target.dataset.roundIndex === '0') {
+                autoFillRoundDates(e.target);
+            }
+        });
+        document.addEventListener('input', e => {
+            if (e.target.id === 'regular-rounds-input') updateRegularRoundsList();
+            if (e.target.type === 'checkbox' && e.target.id.startsWith('check-')) {
+                e.target.nextElementSibling.nextElementSibling.disabled = !e.target.checked;
+            }
+        });
+        addPlayerBtn.addEventListener('click', handleAddPlayer);
+    }
+
+    function addBoxEventListeners() {
+        document.querySelectorAll('.status-box').forEach(box => {
+            box.addEventListener('dblclick', handleBoxDoubleClick);
+            box.addEventListener('mouseover', handleMouseOver);
+            box.addEventListener('mouseout', () => tooltip.style.opacity = '0');
+            box.addEventListener('mousemove', e => { tooltip.style.left = `${e.pageX + 15}px`; tooltip.style.top = `${e.pageY + 15}px`; });
+        });
+    }
+
+    async function handleAddPlayer() {
+        const newName = newPlayerNameInput.value;
+        if (newName && newName.trim()) {
+            const result = await postData('/.netlify/functions/injury-log', { action: 'addPlayer', name: newName.trim() });
+            if (result) {
+                newPlayerNameInput.value = '';
+                await initializeApp();
+                showSettingsModal('players');
+            }
+        }
+    }
+
+    function showDeletePlayerList() {
+        deletePlayerList.innerHTML = '';
+        appData.athletes.forEach(name => {
+            const playerDiv = document.createElement('div');
+            playerDiv.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-700';
+            playerDiv.innerHTML = `<span>${name}</span><button data-name="${name}" class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-500 delete-confirm-btn">Delete</button>`;
+            deletePlayerList.appendChild(playerDiv);
+        });
+    }
+    
+    document.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('delete-confirm-btn')) {
+            const nameToDelete = e.target.dataset.name;
+            if (confirm(`Are you sure you want to permanently delete ${nameToDelete}? This cannot be undone.`)) {
+                const result = await postData('/.netlify/functions/injury-log', { action: 'deletePlayer', name: nameToDelete });
                 if (result) {
-                    newPlayerNameInput.value = '';
                     await initializeApp();
                     showSettingsModal('players');
                 }
             }
         }
+    });
 
-        function showDeletePlayerList() {
-            deletePlayerList.innerHTML = '';
-            appData.athletes.forEach(name => {
-                const playerDiv = document.createElement('div');
-                playerDiv.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-700';
-                playerDiv.innerHTML = `<span>${name}</span><button data-name="${name}" class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-500 delete-confirm-btn">Delete</button>`;
-                deletePlayerList.appendChild(playerDiv);
-            });
-        }
+    function handleBoxDoubleClick(e) {
+        if (!userRoles.includes('physio')) return;
+        const box = e.target;
+        if (!box.dataset.status) return;
+        const statusData = JSON.parse(box.dataset.status);
+        if (statusData.status === 'Pending') return;
+        const today = new Date(); today.setHours(0,0,0,0);
+        const boxDate = new Date(box.dataset.date);
+        if (boxDate > today) { alert("You cannot log an injury for a future date."); return; }
+        modalTitle.textContent = `Update: ${box.dataset.athlete} on ${box.dataset.date}`;
+        document.getElementById('edit-athlete-name').value = box.dataset.athlete;
+        document.getElementById('edit-date').value = box.dataset.date;
+        populateSelect('injury-site', appData.injurySites, statusData.injurySite);
+        populateSelect('injury', appData.injuries, statusData.injury);
+        populateSelect('severity', appData.severities, statusData.severity);
+        populateSelect('status', appData.statuses, statusData.status);
+        document.getElementById('comment').value = statusData.comment || '';
+        modal.classList.remove('hidden');
+    }
+
+    async function handleFormSubmit(e) {
+        e.preventDefault();
+        const athlete = document.getElementById('edit-athlete-name').value;
+        const date = document.getElementById('edit-date').value;
+        const newStatusData = {
+            status: document.getElementById('status').value,
+            injurySite: document.getElementById('injury-site').value,
+            injury: document.getElementById('injury').value,
+            severity: document.getElementById('severity').value,
+            comment: document.getElementById('comment').value
+        };
         
-        document.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('delete-confirm-btn')) {
-                const nameToDelete = e.target.dataset.name;
-                if (confirm(`Are you sure you want to permanently delete ${nameToDelete}? This cannot be undone.`)) {
-                    const result = await postData('/.netlify/functions/injury-log', { action: 'deletePlayer', name: nameToDelete });
-                    if (result) {
-                        await initializeApp();
-                        showSettingsModal('players');
-                    }
+        const propagationPayload = await propagateStatusForward(athlete, date, newStatusData);
+        const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: propagationPayload });
+        
+        if (result) {
+            propagationPayload.forEach(item => { injuryLog[item.key] = item.data; });
+            renderGrid();
+            modal.classList.add('hidden');
+        }
+    }
+
+    async function propagateStatusForward(athlete, startDateStr, statusData) {
+        const payload = [];
+        payload.push({ key: `${athlete}-${startDateStr}`, data: statusData });
+        const today = new Date(); today.setHours(0,0,0,0);
+        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+        let currentDate = new Date(startDateStr);
+        currentDate.setDate(currentDate.getDate() + 1);
+        while (currentDate <= tomorrow) {
+            const key = `${athlete}-${toYYYYMMDD(currentDate)}`;
+            if (!injuryLog[key] || JSON.stringify(injuryLog[key]) !== JSON.stringify(statusData)) {
+                 payload.push({ key, data: statusData });
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        logDebug(`Created propagation payload with ${payload.length} items.`);
+        return payload;
+    }
+
+    function handleSetAvailable() {
+        document.getElementById('injury-site').value = '';
+        document.getElementById('injury').value = '';
+        document.getElementById('severity').value = '';
+        document.getElementById('status').value = 'Available';
+        document.getElementById('comment').value = '';
+    }
+
+    function handleMouseOver(e) {
+        if (!e.target.dataset.status) return;
+        const statusData = JSON.parse(e.target.dataset.status);
+        if (statusData.status && statusData.status !== 'Available' && statusData.status !== 'Pending') {
+            tooltip.textContent = `Status: ${statusData.status}\nInjury: ${statusData.injury || 'N/A'}\nSite: ${statusData.injurySite || 'N/A'}\nSeverity: ${statusData.severity || 'N/A'}\n\nComment: ${statusData.comment || 'None'}`;
+            tooltip.style.opacity = '1';
+        }
+    }
+
+    function switchTab(activeTab) {
+        [seasonsTabBtn, roundsTabBtn, playersTabBtn].forEach(btn => btn.classList.remove('active'));
+        [seasonsTabContent, roundsTabContent, playersTabContent].forEach(content => content.classList.add('hidden'));
+
+        if (activeTab === 'seasons') {
+            seasonsTabBtn.classList.add('active');
+            seasonsTabContent.classList.remove('hidden');
+        } else if (activeTab === 'rounds') {
+            roundsTabBtn.classList.add('active');
+            roundsTabContent.classList.remove('hidden');
+        } else if (activeTab === 'players') {
+            playersTabBtn.classList.add('active');
+            playersTabContent.classList.remove('hidden');
+        }
+    }
+
+    function showSettingsModal(defaultTab = 'seasons') {
+        // Seasons Tab
+        seasonDatesContainer.innerHTML = '';
+        const seasonsByYear = appData.seasonPeriods.reduce((acc, period) => {
+            const year = period.Year;
+            if (!acc[year]) acc[year] = [];
+            acc[year].push(period);
+            return acc;
+        }, {});
+
+        Object.keys(seasonsByYear).sort().forEach(year => {
+            const yearDiv = document.createElement('div');
+            yearDiv.innerHTML = `<h4 class="text-lg font-semibold header-text mb-2">${year}</h4>`;
+            const periodsDiv = document.createElement('div');
+            periodsDiv.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
+            seasonsByYear[year].forEach(period => {
+                periodsDiv.innerHTML += `
+                    <div class="container-bg p-3 rounded-lg">
+                        <label class="block text-sm font-medium secondary-text">${period.Period}</label>
+                        <div class="flex space-x-2 mt-1">
+                            <input type="date" value="${period.StartDate}" class="input-field settings-date-input rounded" data-year="${year}" data-period="${period.Period}" data-type="start">
+                            <input type="date" value="${period.EndDate}" class="input-field settings-date-input rounded" data-year="${year}" data-period="${period.Period}" data-type="end">
+                        </div>
+                    </div>
+                `;
+            });
+            yearDiv.appendChild(periodsDiv);
+            seasonDatesContainer.appendChild(yearDiv);
+        });
+
+        // Rounds Tab
+        const years = [...new Set(appData.seasonPeriods.map(p => p.Year))].sort();
+        yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+        yearSelect.value = new Date().getFullYear();
+        populateRoundsEditor(yearSelect.value);
+        
+        // Players Tab
+        showDeletePlayerList();
+
+        switchTab(defaultTab);
+        settingsModal.classList.remove('hidden');
+    }
+    
+    function populateRoundsEditor(year) {
+        roundsContainer.innerHTML = '';
+        const roundsForYear = appData.seasonRounds.filter(r => r.Year == year);
+        const regularRoundsCount = roundsForYear.filter(r => r.Round.startsWith("Round")).length;
+
+        roundsContainer.innerHTML += `<div class="flex items-center space-x-2"><label class="secondary-text">Home & Away Rounds:</label><input type="number" id="regular-rounds-input" value="${regularRoundsCount}" min="0" max="30" class="input-field w-20 p-1 rounded"></div><div id="regular-rounds-dates" class="space-y-2 mt-2"></div>`;
+        
+        const finals = ["Qualifying Final", "Semi-Final", "Preliminary Final", "Grand Final"];
+        roundsContainer.innerHTML += `<h4 class="text-md font-semibold header-text mt-4">Finals</h4>`;
+        const finalsDiv = document.createElement('div');
+        finalsDiv.className = 'space-y-2';
+        finals.forEach(finalName => {
+            const existingFinal = roundsForYear.find(r => r.Round === finalName);
+            finalsDiv.innerHTML += `<div class="flex items-center space-x-3"><input type="checkbox" id="check-${finalName.replace(/ /g,'-')}" class="input-field h-5 w-5" ${existingFinal ? 'checked' : ''}><label for="check-${finalName.replace(/ /g,'-')}" class="secondary-text w-40">${finalName}</label><input type="date" class="input-field p-1 rounded" value="${existingFinal ? existingFinal.StartDate : ''}" ${!existingFinal ? 'disabled' : ''}></div>`;
+        });
+        roundsContainer.appendChild(finalsDiv);
+        updateRegularRoundsList();
+    }
+    
+    function updateRegularRoundsList() {
+        const count = document.getElementById('regular-rounds-input').value;
+        const container = document.getElementById('regular-rounds-dates');
+        const year = yearSelect.value;
+        const roundsForYear = appData.seasonRounds.filter(r => r.Year == year);
+        container.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const roundName = `Round ${i + 1}`;
+            const existingRound = roundsForYear.find(r => r.Round === roundName);
+            container.innerHTML += `<div class="flex items-center space-x-3 ml-4"><label class="secondary-text w-20">${roundName}</label><input type="date" class="input-field p-1 rounded" data-round-index="${i}" value="${existingRound ? existingRound.StartDate : ''}"></div>`;
+        }
+    }
+    
+    function autoFillRoundDates(round1Input) {
+        const round1Date = new Date(round1Input.value);
+        if (isNaN(round1Date.getTime())) return;
+
+        const allRoundInputs = document.getElementById('regular-rounds-dates').querySelectorAll('input[type="date"]');
+        allRoundInputs.forEach((input, index) => {
+            if (index > 0) {
+                const nextDate = new Date(round1Date);
+                nextDate.setDate(nextDate.getDate() + (index * 7));
+                input.value = toYYYYMMDD(nextDate);
+            }
+        });
+    }
+
+    function handleAddYear() {
+        const years = Object.keys(appData.seasonPeriods.reduce((acc, p) => ({...acc, [p.Year]: true }), {}));
+        const lastYear = Math.max(...years.map(Number));
+        const newYear = lastYear + 1;
+        
+        appData.seasonPeriods.push({ Year: newYear, Period: 'Pre-Season', StartDate: `${newYear}-01-01`, EndDate: `${newYear}-03-25`});
+        appData.seasonPeriods.push({ Year: newYear, Period: 'In-Season', StartDate: `${newYear}-03-26`, EndDate: `${newYear}-09-29`});
+        appData.seasonPeriods.push({ Year: newYear, Period: 'Off-Season', StartDate: `${newYear}-09-30`, EndDate: `${newYear}-12-31`});
+        
+        showSettingsModal();
+    }
+
+    async function handleSaveSettings() {
+        // Save Seasons
+        const seasonInputs = seasonDatesContainer.querySelectorAll('input[type="date"]');
+        const newSeasons = [];
+        const seasonsByYear = {};
+        seasonInputs.forEach(input => {
+            const { year, period, type } = input.dataset;
+            if (!seasonsByYear[year]) seasonsByYear[year] = {};
+            if (!seasonsByYear[year][period]) seasonsByYear[year][period] = { Year: year, Period: period };
+            if (type === 'start') seasonsByYear[year][period].StartDate = input.value;
+            if (type === 'end') seasonsByYear[year][period].EndDate = input.value;
+        });
+        Object.values(seasonsByYear).forEach(yearData => { Object.values(yearData).forEach(periodData => { newSeasons.push(periodData); }); });
+        
+        // Save Rounds
+        const year = yearSelect.value;
+        const newRounds = appData.seasonRounds.filter(r => r.Year != year);
+        const regularRoundsCount = document.getElementById('regular-rounds-input').value;
+        const regularRoundsInputs = document.getElementById('regular-rounds-dates').querySelectorAll('input[type="date"]');
+        for (let i = 0; i < regularRoundsCount; i++) {
+            if (regularRoundsInputs[i].value) {
+                newRounds.push({ Year: year, Round: `Round ${i+1}`, StartDate: regularRoundsInputs[i].value });
+            }
+        }
+        const finalsCheckboxes = roundsContainer.querySelectorAll('input[type="checkbox"]');
+        finalsCheckboxes.forEach(cb => {
+            if (cb.checked) {
+                const roundName = cb.nextElementSibling.textContent;
+                const dateInput = cb.nextElementSibling.nextElementSibling;
+                if (dateInput.value) {
+                    newRounds.push({ Year: year, Round: roundName, StartDate: dateInput.value });
                 }
             }
         });
 
-        function handleBoxDoubleClick(e) {
-            if (!userRoles.includes('physio')) return;
-            const box = e.target;
-            if (!box.dataset.status) return;
-            const statusData = JSON.parse(box.dataset.status);
-            if (statusData.status === 'Pending') return;
-            const today = new Date(); today.setHours(0,0,0,0);
-            const boxDate = new Date(box.dataset.date);
-            if (boxDate > today) { alert("You cannot log an injury for a future date."); return; }
-            modalTitle.textContent = `Update: ${box.dataset.athlete} on ${box.dataset.date}`;
-            document.getElementById('edit-athlete-name').value = box.dataset.athlete;
-            document.getElementById('edit-date').value = box.dataset.date;
-            populateSelect('injury-site', appData.injurySites, statusData.injurySite);
-            populateSelect('injury', appData.injuries, statusData.injury);
-            populateSelect('severity', appData.severities, statusData.severity);
-            populateSelect('status', appData.statuses, statusData.status);
-            document.getElementById('comment').value = statusData.comment || '';
-            modal.classList.remove('hidden');
+        const [seasonResult, roundResult] = await Promise.all([
+            postData('/.netlify/functions/injury-log', { action: 'updateSeasonDates', seasons: newSeasons }),
+            postData('/.netlify/functions/injury-log', { action: 'updateSeasonRounds', rounds: newRounds })
+        ]);
+
+        if (seasonResult && roundResult) {
+            settingsModal.classList.add('hidden');
+            await initializeApp();
         }
+    }
 
-        async function handleFormSubmit(e) {
-            e.preventDefault();
-            const athlete = document.getElementById('edit-athlete-name').value;
-            const date = document.getElementById('edit-date').value;
-            const newStatusData = {
-                status: document.getElementById('status').value,
-                injurySite: document.getElementById('injury-site').value,
-                injury: document.getElementById('injury').value,
-                severity: document.getElementById('severity').value,
-                comment: document.getElementById('comment').value
-            };
-            
-            const propagationPayload = await propagateStatusForward(athlete, date, newStatusData);
-            const result = await postData('/.netlify/functions/injury-log', { action: 'batchUpdateLog', payload: propagationPayload });
-            
-            if (result) {
-                propagationPayload.forEach(item => { injuryLog[item.key] = item.data; });
-                renderGrid();
-                modal.classList.add('hidden');
-            }
+    function showReportsModal() {
+        const yearsWithData = [...new Set(Object.keys(injuryLog).map(key => key.split('-')[1]))].sort((a,b) => b - a);
+        reportYearSelect.innerHTML = yearsWithData.map(y => `<option value="${y}">${y}</option>`).join('');
+        reportAthleteSelect.innerHTML = appData.athletes.map(a => `<option value="${a}">${a}</option>`).join('');
+        generateReport();
+        reportsModal.classList.remove('hidden');
+    }
+
+    function generateReport() {
+        const reportType = reportTypeSelect.value;
+        athleteSelectorContainer.classList.toggle('hidden', reportType !== 'athlete');
+        if (reportType === 'team') {
+            generateTeamSummary();
+        } else {
+            generateAthleteSummary();
         }
+    }
 
-        async function propagateStatusForward(athlete, startDateStr, statusData) {
-            const payload = [];
-            payload.push({ key: `${athlete}-${startDateStr}`, data: statusData });
-            const today = new Date(); today.setHours(0,0,0,0);
-            const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-            let currentDate = new Date(startDateStr);
-            currentDate.setDate(currentDate.getDate() + 1);
-            while (currentDate <= tomorrow) {
-                const key = `${athlete}-${toYYYYMMDD(currentDate)}`;
-                if (!injuryLog[key] || JSON.stringify(injuryLog[key]) !== JSON.stringify(statusData)) {
-                     payload.push({ key, data: statusData });
-                }
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            logDebug(`Created propagation payload with ${payload.length} items.`);
-            return payload;
-        }
+    function calculateStats(entries) {
+        const stats = { total: entries.length };
+        appData.statuses.forEach(status => {
+            stats[status] = entries.filter(e => e.status === status).length;
+        });
+        return stats;
+    }
 
-        function handleSetAvailable() {
-            document.getElementById('injury-site').value = '';
-            document.getElementById('injury').value = '';
-            document.getElementById('severity').value = '';
-            document.getElementById('status').value = 'Available';
-            document.getElementById('comment').value = '';
-        }
-
-        function handleMouseOver(e) {
-            if (!e.target.dataset.status) return;
-            const statusData = JSON.parse(e.target.dataset.status);
-            if (statusData.status && statusData.status !== 'Available' && statusData.status !== 'Pending') {
-                tooltip.textContent = `Status: ${statusData.status}\nInjury: ${statusData.injury || 'N/A'}\nSite: ${statusData.injurySite || 'N/A'}\nSeverity: ${statusData.severity || 'N/A'}\n\nComment: ${statusData.comment || 'None'}`;
-                tooltip.style.opacity = '1';
-            }
-        }
-
-        function switchTab(activeTab) {
-            [seasonsTabBtn, roundsTabBtn, playersTabBtn].forEach(btn => btn.classList.remove('active'));
-            [seasonsTabContent, roundsTabContent, playersTabContent].forEach(content => content.classList.add('hidden'));
-
-            if (activeTab === 'seasons') {
-                seasonsTabBtn.classList.add('active');
-                seasonsTabContent.classList.remove('hidden');
-            } else if (activeTab === 'rounds') {
-                roundsTabBtn.classList.add('active');
-                roundsTabContent.classList.remove('hidden');
-            } else if (activeTab === 'players') {
-                playersTabBtn.classList.add('active');
-                playersTabContent.classList.remove('hidden');
-            }
-        }
-
-        function showSettingsModal(defaultTab = 'seasons') {
-            // Seasons Tab
-            seasonDatesContainer.innerHTML = '';
-            const seasonsByYear = appData.seasonPeriods.reduce((acc, period) => {
-                const year = period.Year;
-                if (!acc[year]) acc[year] = [];
-                acc[year].push(period);
-                return acc;
-            }, {});
-
-            Object.keys(seasonsByYear).sort().forEach(year => {
-                const yearDiv = document.createElement('div');
-                yearDiv.innerHTML = `<h4 class="text-lg font-semibold header-text mb-2">${year}</h4>`;
-                const periodsDiv = document.createElement('div');
-                periodsDiv.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
-                seasonsByYear[year].forEach(period => {
-                    periodsDiv.innerHTML += `
-                        <div class="container-bg p-3 rounded-lg">
-                            <label class="block text-sm font-medium secondary-text">${period.Period}</label>
-                            <div class="flex space-x-2 mt-1">
-                                <input type="date" value="${period.StartDate}" class="input-field settings-date-input rounded" data-year="${year}" data-period="${period.Period}" data-type="start">
-                                <input type="date" value="${period.EndDate}" class="input-field settings-date-input rounded" data-year="${year}" data-period="${period.Period}" data-type="end">
-                            </div>
-                        </div>
-                    `;
-                });
-                yearDiv.appendChild(periodsDiv);
-                seasonDatesContainer.appendChild(yearDiv);
-            });
-
-            // Rounds Tab
-            const years = [...new Set(appData.seasonPeriods.map(p => p.Year))].sort();
-            yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
-            yearSelect.value = new Date().getFullYear();
-            populateRoundsEditor(yearSelect.value);
-            
-            // Players Tab
-            showDeletePlayerList();
-
-            switchTab(defaultTab);
-            settingsModal.classList.remove('hidden');
+    function generateAthleteSummary() {
+        const year = reportYearSelect.value;
+        const athlete = reportAthleteSelect.value;
+        const period = reportPeriodSelect.value;
+        
+        const { startDate, endDate } = getPeriodDates(year, period);
+        
+        let athleteEntries = [];
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            if (d > new Date()) break;
+            athleteEntries.push(getStatusForDate(athlete, new Date(d)));
         }
         
-        function populateRoundsEditor(year) {
-            roundsContainer.innerHTML = '';
-            const roundsForYear = appData.seasonRounds.filter(r => r.Year == year);
-            const regularRoundsCount = roundsForYear.filter(r => r.Round.startsWith("Round")).length;
+        const stats = calculateStats(athleteEntries);
 
-            roundsContainer.innerHTML += `<div class="flex items-center space-x-2"><label class="secondary-text">Home & Away Rounds:</label><input type="number" id="regular-rounds-input" value="${regularRoundsCount}" min="0" max="30" class="input-field w-20 p-1 rounded"></div><div id="regular-rounds-dates" class="space-y-2 mt-2"></div>`;
-            
-            const finals = ["Qualifying Final", "Semi-Final", "Preliminary Final", "Grand Final"];
-            roundsContainer.innerHTML += `<h4 class="text-md font-semibold header-text mt-4">Finals</h4>`;
-            const finalsDiv = document.createElement('div');
-            finalsDiv.className = 'space-y-2';
-            finals.forEach(finalName => {
-                const existingFinal = roundsForYear.find(r => r.Round === finalName);
-                finalsDiv.innerHTML += `<div class="flex items-center space-x-3"><input type="checkbox" id="check-${finalName.replace(/ /g,'-')}" class="input-field h-5 w-5" ${existingFinal ? 'checked' : ''}><label for="check-${finalName.replace(/ /g,'-')}" class="secondary-text w-40">${finalName}</label><input type="date" class="input-field p-1 rounded" value="${existingFinal ? existingFinal.StartDate : ''}" ${!existingFinal ? 'disabled' : ''}></div>`;
-            });
-            roundsContainer.appendChild(finalsDiv);
-            updateRegularRoundsList();
+        let html = `<h4 class="text-xl font-bold header-text mb-4">${athlete} - ${year} ${period}</h4>`;
+        if (stats.total === 0) {
+            html += `<p class="secondary-text">No data available for this period.</p>`;
+            reportContent.innerHTML = html;
+            return;
         }
+
+        html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">`;
+        Object.entries(stats).forEach(([status, count]) => {
+            const percentage = stats.total > 0 ? ((count / stats.total) * 100).toFixed(1) : 0;
+            html += `
+                <div class="container-bg p-4 rounded-lg text-center">
+                    <p class="text-2xl font-bold header-text">${count}</p>
+                    <p class="secondary-text">${status} days (${percentage}%)</p>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        reportContent.innerHTML = html;
+    }
+
+    function generateTeamSummary() {
+        const year = reportYearSelect.value;
+        const period = reportPeriodSelect.value;
         
-        function updateRegularRoundsList() {
-            const count = document.getElementById('regular-rounds-input').value;
-            const container = document.getElementById('regular-rounds-dates');
-            const year = yearSelect.value;
-            const roundsForYear = appData.seasonRounds.filter(r => r.Year == year);
-            container.innerHTML = '';
-            for (let i = 0; i < count; i++) {
-                const roundName = `Round ${i + 1}`;
-                const existingRound = roundsForYear.find(r => r.Round === roundName);
-                container.innerHTML += `<div class="flex items-center space-x-3 ml-4"><label class="secondary-text w-20">${roundName}</label><input type="date" class="input-field p-1 rounded" data-round-index="${i}" value="${existingRound ? existingRound.StartDate : ''}"></div>`;
-            }
-        }
-        
-        function autoFillRoundDates(round1Input) {
-            const round1Date = new Date(round1Input.value);
-            if (isNaN(round1Date.getTime())) return;
+        const { startDate, endDate } = getPeriodDates(year, period);
 
-            const allRoundInputs = document.getElementById('regular-rounds-dates').querySelectorAll('input[type="date"]');
-            allRoundInputs.forEach((input, index) => {
-                if (index > 0) {
-                    const nextDate = new Date(round1Date);
-                    nextDate.setDate(nextDate.getDate() + (index * 7));
-                    input.value = toYYYYMMDD(nextDate);
-                }
-            });
-        }
-
-        function handleAddYear() {
-            const years = Object.keys(appData.seasonPeriods.reduce((acc, p) => ({...acc, [p.Year]: true }), {}));
-            const lastYear = Math.max(...years.map(Number));
-            const newYear = lastYear + 1;
-            
-            appData.seasonPeriods.push({ Year: newYear, Period: 'Pre-Season', StartDate: `${newYear}-01-01`, EndDate: `${newYear}-03-25`});
-            appData.seasonPeriods.push({ Year: newYear, Period: 'In-Season', StartDate: `${newYear}-03-26`, EndDate: `${newYear}-09-29`});
-            appData.seasonPeriods.push({ Year: newYear, Period: 'Off-Season', StartDate: `${newYear}-09-30`, EndDate: `${newYear}-12-31`});
-            
-            showSettingsModal();
-        }
-
-        async function handleSaveSettings() {
-            // Save Seasons
-            const seasonInputs = seasonDatesContainer.querySelectorAll('input[type="date"]');
-            const newSeasons = [];
-            const seasonsByYear = {};
-            seasonInputs.forEach(input => {
-                const { year, period, type } = input.dataset;
-                if (!seasonsByYear[year]) seasonsByYear[year] = {};
-                if (!seasonsByYear[year][period]) seasonsByYear[year][period] = { Year: year, Period: period };
-                if (type === 'start') seasonsByYear[year][period].StartDate = input.value;
-                if (type === 'end') seasonsByYear[year][period].EndDate = input.value;
-            });
-            Object.values(seasonsByYear).forEach(yearData => { Object.values(yearData).forEach(periodData => { newSeasons.push(periodData); }); });
-            
-            // Save Rounds
-            const year = yearSelect.value;
-            const newRounds = appData.seasonRounds.filter(r => r.Year != year);
-            const regularRoundsCount = document.getElementById('regular-rounds-input').value;
-            const regularRoundsInputs = document.getElementById('regular-rounds-dates').querySelectorAll('input[type="date"]');
-            for (let i = 0; i < regularRoundsCount; i++) {
-                if (regularRoundsInputs[i].value) {
-                    newRounds.push({ Year: year, Round: `Round ${i+1}`, StartDate: regularRoundsInputs[i].value });
-                }
-            }
-            const finalsCheckboxes = roundsContainer.querySelectorAll('input[type="checkbox"]');
-            finalsCheckboxes.forEach(cb => {
-                if (cb.checked) {
-                    const roundName = cb.nextElementSibling.textContent;
-                    const dateInput = cb.nextElementSibling.nextElementSibling;
-                    if (dateInput.value) {
-                        newRounds.push({ Year: year, Round: roundName, StartDate: dateInput.value });
-                    }
-                }
-            });
-
-            const [seasonResult, roundResult] = await Promise.all([
-                postData('/.netlify/functions/injury-log', { action: 'updateSeasonDates', seasons: newSeasons }),
-                postData('/.netlify/functions/injury-log', { action: 'updateSeasonRounds', rounds: newRounds })
-            ]);
-
-            if (seasonResult && roundResult) {
-                settingsModal.classList.add('hidden');
-                await initializeApp();
-            }
-        }
-
-        function showReportsModal() {
-            const yearsWithData = [...new Set(Object.keys(injuryLog).map(key => key.split('-')[1]))].sort((a,b) => b - a);
-            reportYearSelect.innerHTML = yearsWithData.map(y => `<option value="${y}">${y}</option>`).join('');
-            reportAthleteSelect.innerHTML = appData.athletes.map(a => `<option value="${a}">${a}</option>`).join('');
-            generateReport();
-            reportsModal.classList.remove('hidden');
-        }
-
-        function generateReport() {
-            const reportType = reportTypeSelect.value;
-            athleteSelectorContainer.classList.toggle('hidden', reportType !== 'athlete');
-            if (reportType === 'team') {
-                generateTeamSummary();
-            } else {
-                generateAthleteSummary();
-            }
-        }
-
-        function calculateStats(entries) {
-            const stats = { total: entries.length };
-            appData.statuses.forEach(status => {
-                stats[status] = entries.filter(e => e.status === status).length;
-            });
-            return stats;
-        }
-
-        function generateAthleteSummary() {
-            const year = reportYearSelect.value;
-            const athlete = reportAthleteSelect.value;
-            const period = reportPeriodSelect.value;
-            
-            const { startDate, endDate } = getPeriodDates(year, period);
-            
-            let athleteEntries = [];
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        let teamEntries = [];
+        for (const athlete of appData.athletes) {
+             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                 if (d > new Date()) break;
-                athleteEntries.push(getStatusForDate(athlete, new Date(d)));
+                teamEntries.push(getStatusForDate(athlete, new Date(d)));
             }
-            
-            const stats = calculateStats(athleteEntries);
+        }
 
-            let html = `<h4 class="text-xl font-bold header-text mb-4">${athlete} - ${year} ${period}</h4>`;
-            if (stats.total === 0) {
-                html += `<p class="secondary-text">No data available for this period.</p>`;
-                reportContent.innerHTML = html;
-                return;
-            }
+        const stats = calculateStats(teamEntries);
 
-            html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">`;
-            Object.entries(stats).forEach(([status, count]) => {
-                const percentage = stats.total > 0 ? ((count / stats.total) * 100).toFixed(1) : 0;
-                html += `
-                    <div class="container-bg p-4 rounded-lg text-center">
-                        <p class="text-2xl font-bold header-text">${count}</p>
-                        <p class="secondary-text">${status} days (${percentage}%)</p>
-                    </div>
-                `;
-            });
-            html += `</div>`;
+        let html = `<h4 class="text-xl font-bold header-text mb-4">Team Summary - ${year} ${period}</h4>`;
+        if (stats.total === 0) {
+            html += `<p class="secondary-text">No data available for this period.</p>`;
             reportContent.innerHTML = html;
-        }
-
-        function generateTeamSummary() {
-            const year = reportYearSelect.value;
-            const period = reportPeriodSelect.value;
-            
-            const { startDate, endDate } = getPeriodDates(year, period);
-
-            let teamEntries = [];
-            for (const athlete of appData.athletes) {
-                 for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                    if (d > new Date()) break;
-                    teamEntries.push(getStatusForDate(athlete, new Date(d)));
-                }
-            }
-
-            const stats = calculateStats(teamEntries);
-
-            let html = `<h4 class="text-xl font-bold header-text mb-4">Team Summary - ${year} ${period}</h4>`;
-            if (stats.total === 0) {
-                html += `<p class="secondary-text">No data available for this period.</p>`;
-                reportContent.innerHTML = html;
-                return;
-            }
-            
-            html += `<div class="mb-8"><h5 class="text-lg font-semibold header-text mb-2">Overall Availability</h5><div class="w-full container-bg rounded-lg p-4">`;
-            Object.entries(stats).forEach(([status, count]) => {
-                if (status === 'total') return;
-                const percentage = stats.total > 0 ? ((count / stats.total) * 100).toFixed(1) : 0;
-                const color = appData.colorMap[status] || '#4a5568';
-                html += `<div class="flex items-center mb-2"><div class="w-32 secondary-text">${status}</div><div class="flex-grow bg-gray-700 rounded-full h-6"><div class="chart-bar h-6" style="width: ${percentage}%; background-color: ${color};"><span class="font-bold">${percentage}%</span></div></div></div>`;
-            });
-            html += `</div></div>`;
-
-            const injuryEntries = teamEntries.filter(e => e.status !== 'Available' && e.status !== 'Pending');
-            html += generateBreakdownChart('Injury Location', injuryEntries, 'injurySite');
-            html += generateBreakdownChart('Injury Type', injuryEntries, 'injury');
-            html += generateBreakdownChart('Injury Severity', injuryEntries, 'severity');
-
-            reportContent.innerHTML = html;
-        }
-
-        function getPeriodDates(year, periodName) {
-            if (periodName === 'Full Season') {
-                return { startDate: new Date(`${year}-01-01`), endDate: new Date(`${year}-12-31`) };
-            }
-            const period = appData.seasonPeriods.find(p => p.Year == year && p.Period === periodName);
-            if (period) {
-                return { startDate: new Date(period.StartDate), endDate: new Date(period.EndDate) };
-            }
-            return { startDate: new Date(), endDate: new Date() }; // Fallback
-        }
-
-        function generateBreakdownChart(title, entries, property) {
-            const counts = entries.reduce((acc, entry) => {
-                const value = entry[property];
-                if (value) {
-                    acc[value] = (acc[value] || 0) + 1;
-                }
-                return acc;
-            }, {});
-
-            if (Object.keys(counts).length === 0) return '';
-
-            const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
-            const maxCount = sorted[0][1];
-
-            let chartHtml = `<div class="mb-8"><h5 class="text-lg font-semibold header-text mb-2">${title}</h5><div class="w-full container-bg rounded-lg p-4">`;
-            sorted.forEach(([item, count]) => {
-                const percentage = ((count / maxCount) * 100);
-                chartHtml += `<div class="flex items-center mb-2"><div class="w-40 secondary-text truncate">${item}</div><div class="flex-grow bg-gray-700 rounded-full h-6"><div class="chart-bar h-6" style="width: ${percentage}%;"><span class="font-bold">${count}</span></div></div></div>`;
-            });
-            chartHtml += `</div></div>`;
-            return chartHtml;
-        }
-
-        function toYYYYMMDD(date) { return new Date(date).toISOString().split('T')[0]; }
-        function formatDateHeader(date) { const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; return `${days[date.getDay()]}<br>${date.getDate()}`; }
-        function formatDateDisplay(date) { return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
-        function populateSelect(elementId, options, selectedValue) {
-            const select = document.getElementById(elementId);
-            select.innerHTML = '<option value="">-- Select --</option>';
-            options.forEach(option => {
-                const isSelected = option === selectedValue ? 'selected' : '';
-                select.innerHTML += `<option value="${option}" ${isSelected}>${option}</option>`;
-            });
+            return;
         }
         
-        initializeApp();
-        setupEventListeners();
+        html += `<div class="mb-8"><h5 class="text-lg font-semibold header-text mb-2">Overall Availability</h5><div class="w-full container-bg rounded-lg p-4">`;
+        Object.entries(stats).forEach(([status, count]) => {
+            if (status === 'total') return;
+            const percentage = stats.total > 0 ? ((count / stats.total) * 100).toFixed(1) : 0;
+            const color = appData.colorMap[status] || '#4a5568';
+            html += `<div class="flex items-center mb-2"><div class="w-32 secondary-text">${status}</div><div class="flex-grow bg-gray-700 rounded-full h-6"><div class="chart-bar h-6" style="width: ${percentage}%; background-color: ${color};"><span class="font-bold">${percentage}%</span></div></div></div>`;
+        });
+        html += `</div></div>`;
+
+        const injuryEntries = teamEntries.filter(e => e.status !== 'Available' && e.status !== 'Pending');
+        html += generateBreakdownChart('Injury Location', injuryEntries, 'injurySite');
+        html += generateBreakdownChart('Injury Type', injuryEntries, 'injury');
+        html += generateBreakdownChart('Injury Severity', injuryEntries, 'severity');
+
+        reportContent.innerHTML = html;
+    }
+
+    function getPeriodDates(year, periodName) {
+        if (periodName === 'Full Season') {
+            return { startDate: new Date(`${year}-01-01`), endDate: new Date(`${year}-12-31`) };
+        }
+        const period = appData.seasonPeriods.find(p => p.Year == year && p.Period === periodName);
+        if (period) {
+            return { startDate: new Date(period.StartDate), endDate: new Date(period.EndDate) };
+        }
+        return { startDate: new Date(), endDate: new Date() }; // Fallback
+    }
+
+    function generateBreakdownChart(title, entries, property) {
+        const counts = entries.reduce((acc, entry) => {
+            const value = entry[property];
+            if (value) {
+                acc[value] = (acc[value] || 0) + 1;
+            }
+            return acc;
+        }, {});
+
+        if (Object.keys(counts).length === 0) return '';
+
+        const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+        const maxCount = sorted[0][1];
+
+        let chartHtml = `<div class="mb-8"><h5 class="text-lg font-semibold header-text mb-2">${title}</h5><div class="w-full container-bg rounded-lg p-4">`;
+        sorted.forEach(([item, count]) => {
+            const percentage = ((count / maxCount) * 100);
+            chartHtml += `<div class="flex items-center mb-2"><div class="w-40 secondary-text truncate">${item}</div><div class="flex-grow bg-gray-700 rounded-full h-6"><div class="chart-bar h-6" style="width: ${percentage}%;"><span class="font-bold">${count}</span></div></div></div>`;
+        });
+        chartHtml += `</div></div>`;
+        return chartHtml;
+    }
+
+    function toYYYYMMDD(date) { return new Date(date).toISOString().split('T')[0]; }
+    function formatDateHeader(date) { const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; return `${days[date.getDay()]}<br>${date.getDate()}`; }
+    function formatDateDisplay(date) { return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+    function populateSelect(elementId, options, selectedValue) {
+        const select = document.getElementById(elementId);
+        select.innerHTML = '<option value="">-- Select --</option>';
+        options.forEach(option => {
+            const isSelected = option === selectedValue ? 'selected' : '';
+            select.innerHTML += `<option value="${option}" ${isSelected}>${option}</option>`;
+        });
+    }
+    
+    initializeApp();
+    setupEventListeners();
     });
     </script>
 </body>
