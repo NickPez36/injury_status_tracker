@@ -6,6 +6,15 @@ const LOG_PATH = "data/injury_log.csv";
 const SEASON_DATES_PATH = "data/season_dates.csv";
 const SEASON_ROUNDS_PATH = "data/season_rounds.csv";
 
+// Helper to check user's role. Only 'physio' can make changes.
+function isAuthorized(context) {
+    if (!context.clientContext || !context.clientContext.user) {
+        return false; // No user logged in
+    }
+    const roles = context.clientContext.user.app_metadata.roles || [];
+    return roles.includes('physio');
+}
+
 async function getFile(octokit, path) {
     try {
         const { data } = await octokit.repos.getContent({ owner: GITHUB_USER, repo: GITHUB_REPO, path });
@@ -71,13 +80,17 @@ function parseInjuryLog(csvText) {
     return log;
 }
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
     if (!GITHUB_TOKEN || !GITHUB_USER || !GITHUB_REPO) {
         return { statusCode: 500, body: JSON.stringify({ error: "Missing required environment variables." }) };
     }
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
     if (event.httpMethod === 'GET') {
+        if (!context.clientContext || !context.clientContext.user) {
+             return { statusCode: 401, body: JSON.stringify({ error: "Unauthorized. Please log in."}) };
+        }
+        
         if (event.queryStringParameters.config === 'true') {
             const [configFile, seasonFile, roundsFile] = await Promise.all([
                 getFile(octokit, CONFIG_PATH),
@@ -95,6 +108,10 @@ exports.handler = async (event) => {
     }
 
     if (event.httpMethod === 'POST') {
+        if (!isAuthorized(context)) {
+            return { statusCode: 403, body: JSON.stringify({ error: "You are not authorized to make changes." }) };
+        }
+        
         const body = JSON.parse(event.body);
 
         if (body.action === 'updateSeasonRounds') {
