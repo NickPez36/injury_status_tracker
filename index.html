@@ -226,6 +226,7 @@
         async function initializeApp() {
             try {
                 logDebug("Initializing application...");
+                setupEventListeners();
                 
                 appData = await fetchAppData();
                 if (!appData) throw new Error("Could not load app configuration.");
@@ -854,9 +855,15 @@
         function generateAthleteSummary() {
             const year = reportYearSelect.value;
             const athlete = reportAthleteSelect.value;
-            const athleteEntries = Object.entries(injuryLog)
-                .filter(([key]) => key.startsWith(`${athlete}-${year}`))
-                .map(([_, value]) => value);
+            
+            const yearStartDate = new Date(`${year}-01-01`);
+            const today = new Date();
+            const yearEndDate = today.getFullYear().toString() === year ? today : new Date(`${year}-12-31`);
+            
+            let athleteEntries = [];
+            for (let d = new Date(yearStartDate); d <= yearEndDate; d.setDate(d.getDate() + 1)) {
+                athleteEntries.push(getStatusForDate(athlete, new Date(d)));
+            }
             
             const stats = calculateStats(athleteEntries);
 
@@ -883,9 +890,16 @@
 
         function generateTeamSummary() {
             const year = reportYearSelect.value;
-            const teamEntries = Object.entries(injuryLog)
-                .filter(([key]) => key.includes(`-${year}-`))
-                .map(([_, value]) => value);
+            const yearStartDate = new Date(`${year}-01-01`);
+            const today = new Date();
+            const yearEndDate = today.getFullYear().toString() === year ? today : new Date(`${year}-12-31`);
+
+            let teamEntries = [];
+            for (const athlete of appData.athletes) {
+                 for (let d = new Date(yearStartDate); d <= yearEndDate; d.setDate(d.getDate() + 1)) {
+                    teamEntries.push(getStatusForDate(athlete, new Date(d)));
+                }
+            }
 
             const stats = calculateStats(teamEntries);
 
