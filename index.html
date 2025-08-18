@@ -121,15 +121,15 @@
             <!-- Players Tab -->
             <div id="players-tab-content" class="hidden">
                  <p class="secondary-text mb-4">Manage the player roster. Changes will be reflected in the main grid.</p>
-                 <div class="flex space-x-4">
-                    <div class="w-1/2">
+                 <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                    <div class="w-full md:w-1/2">
                         <h4 class="text-lg font-semibold header-text mb-2">Add New Player</h4>
                         <div class="flex space-x-2">
                             <input type="text" id="new-player-name" placeholder="Enter full name" class="input-field w-full p-2 rounded">
                             <button id="add-player-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Add</button>
                         </div>
                     </div>
-                    <div class="w-1/2">
+                    <div class="w-full md:w-1/2">
                         <h4 class="text-lg font-semibold header-text mb-2">Delete Player</h4>
                         <div id="delete-player-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
                     </div>
@@ -150,6 +150,15 @@
                 <div class="flex items-center space-x-2">
                     <label for="report-year-select" class="secondary-text">Year:</label>
                     <select id="report-year-select" class="input-field p-2 rounded"></select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="report-period-select" class="secondary-text">Period:</label>
+                    <select id="report-period-select" class="input-field p-2 rounded">
+                        <option value="Full Season">Full Season</option>
+                        <option value="Pre-Season">Pre-Season</option>
+                        <option value="In-Season">In-Season</option>
+                        <option value="Off-Season">Off-Season</option>
+                    </select>
                 </div>
                 <div class="flex items-center space-x-2">
                     <label for="report-type-select" class="secondary-text">Report Type:</label>
@@ -210,6 +219,7 @@
         const reportsModal = document.getElementById('reports-modal');
         const cancelReportsBtn = document.getElementById('cancel-reports');
         const reportYearSelect = document.getElementById('report-year-select');
+        const reportPeriodSelect = document.getElementById('report-period-select');
         const reportTypeSelect = document.getElementById('report-type-select');
         const athleteSelectorContainer = document.getElementById('athlete-selector-container');
         const reportAthleteSelect = document.getElementById('report-athlete-select');
@@ -526,6 +536,7 @@
             playersTabBtn.addEventListener('click', () => switchTab('players'));
             yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
             reportYearSelect.addEventListener('change', generateReport);
+            reportPeriodSelect.addEventListener('change', generateReport);
             reportTypeSelect.addEventListener('change', generateReport);
             reportAthleteSelect.addEventListener('change', generateReport);
             roundsContainer.addEventListener('change', (e) => {
@@ -855,19 +866,19 @@
         function generateAthleteSummary() {
             const year = reportYearSelect.value;
             const athlete = reportAthleteSelect.value;
+            const period = reportPeriodSelect.value;
             
-            const yearStartDate = new Date(`${year}-01-01`);
-            const today = new Date();
-            const yearEndDate = today.getFullYear().toString() === year ? today : new Date(`${year}-12-31`);
+            const { startDate, endDate } = getPeriodDates(year, period);
             
             let athleteEntries = [];
-            for (let d = new Date(yearStartDate); d <= yearEndDate; d.setDate(d.getDate() + 1)) {
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                if (d > new Date()) break; // Don't project into the future
                 athleteEntries.push(getStatusForDate(athlete, new Date(d)));
             }
             
             const stats = calculateStats(athleteEntries);
 
-            let html = `<h4 class="text-xl font-bold header-text mb-4">${athlete} - ${year} Summary</h4>`;
+            let html = `<h4 class="text-xl font-bold header-text mb-4">${athlete} - ${year} ${period}</h4>`;
             if (stats.total === 0) {
                 html += `<p class="secondary-text">No data available for this period.</p>`;
                 reportContent.innerHTML = html;
@@ -890,20 +901,21 @@
 
         function generateTeamSummary() {
             const year = reportYearSelect.value;
-            const yearStartDate = new Date(`${year}-01-01`);
-            const today = new Date();
-            const yearEndDate = today.getFullYear().toString() === year ? today : new Date(`${year}-12-31`);
+            const period = reportPeriodSelect.value;
+            
+            const { startDate, endDate } = getPeriodDates(year, period);
 
             let teamEntries = [];
             for (const athlete of appData.athletes) {
-                 for (let d = new Date(yearStartDate); d <= yearEndDate; d.setDate(d.getDate() + 1)) {
+                 for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    if (d > new Date()) break;
                     teamEntries.push(getStatusForDate(athlete, new Date(d)));
                 }
             }
 
             const stats = calculateStats(teamEntries);
 
-            let html = `<h4 class="text-xl font-bold header-text mb-4">Team Summary - ${year}</h4>`;
+            let html = `<h4 class="text-xl font-bold header-text mb-4">Team Summary - ${year} ${period}</h4>`;
             if (stats.total === 0) {
                 html += `<p class="secondary-text">No data available for this period.</p>`;
                 reportContent.innerHTML = html;
@@ -925,6 +937,17 @@
             html += generateBreakdownChart('Injury Severity', injuryEntries, 'severity');
 
             reportContent.innerHTML = html;
+        }
+
+        function getPeriodDates(year, periodName) {
+            if (periodName === 'Full Season') {
+                return { startDate: new Date(`${year}-01-01`), endDate: new Date(`${year}-12-31`) };
+            }
+            const period = appData.seasonPeriods.find(p => p.Year == year && p.Period === periodName);
+            if (period) {
+                return { startDate: new Date(period.StartDate), endDate: new Date(period.EndDate) };
+            }
+            return { startDate: new Date(), endDate: new Date() }; // Fallback
         }
 
         function generateBreakdownChart(title, entries, property) {
