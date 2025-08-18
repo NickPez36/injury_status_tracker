@@ -249,7 +249,7 @@
                 }
                 
                 logDebug("Application ready.");
-            } catch (error)
+            } catch (error) {
                 logDebug(`CRITICAL ERROR: ${error.message}`);
                 trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full text-center">A critical error occurred. Please check the console.</p>`;
             }
@@ -938,6 +938,7 @@
         }
         
         initializeApp();
+        setupEventListeners();
     });
     </script>
 </body>
