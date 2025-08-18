@@ -34,6 +34,7 @@
         .timeline-segment { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tab-button { background-color: #4a5568; padding: 8px 16px; border-radius: 6px; }
         .tab-button.active { background-color: #718096; }
+        .chart-bar { background-color: #4a5568; border-radius: 0 4px 4px 0; text-align: right; padding-right: 8px; color: #1a202c; white-space: nowrap; }
         @media (max-width: 768px) { #tracker-grid { grid-template-columns: 80px repeat(14, minmax(30px, 1fr)); } .grid-header, .athlete-name { font-size: 0.7rem; padding: 0.5rem; } }
     </style>
 </head>
@@ -42,7 +43,10 @@
     <div class="container mx-auto p-2 sm:p-4">
         <header class="text-center my-6 relative">
             <h1 class="text-3xl sm:text-4xl font-bold header-text">Athlete Injury Status Tracker</h1>
-            <button id="settings-btn" class="absolute top-0 right-0 px-4 py-2 button-primary rounded-lg shadow">Settings</button>
+            <div class="absolute top-0 right-0 flex space-x-2">
+                <button id="reports-btn" class="px-4 py-2 button-primary rounded-lg shadow">Reports</button>
+                <button id="settings-btn" class="px-4 py-2 button-primary rounded-lg shadow">Settings</button>
+            </div>
         </header>
 
         <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
@@ -135,6 +139,34 @@
             </div>
         </div>
     </div>
+    
+    <!-- Reports Modal -->
+    <div id="reports-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
+        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-5xl h-full max-h-[90vh]">
+            <h3 class="text-2xl font-bold mb-4 header-text">Availability Reports</h3>
+            <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 mb-4">
+                <div class="flex items-center space-x-2">
+                    <label for="report-year-select" class="secondary-text">Year:</label>
+                    <select id="report-year-select" class="input-field p-2 rounded"></select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="report-type-select" class="secondary-text">Report Type:</label>
+                    <select id="report-type-select" class="input-field p-2 rounded">
+                        <option value="team">Team Summary</option>
+                        <option value="athlete">Athlete Summary</option>
+                    </select>
+                </div>
+                <div id="athlete-selector-container" class="hidden flex items-center space-x-2">
+                    <label for="report-athlete-select" class="secondary-text">Athlete:</label>
+                    <select id="report-athlete-select" class="input-field p-2 rounded"></select>
+                </div>
+            </div>
+            <div id="report-content" class="overflow-y-auto h-[calc(100%-120px)]"></div>
+            <div class="flex justify-end items-center mt-6">
+                <button type="button" id="cancel-reports" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Close</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Tooltip -->
     <div id="tooltip" class="absolute rounded-lg py-2 px-3 shadow-lg opacity-0 transition-opacity pointer-events-none"></div>
@@ -149,6 +181,7 @@
         const addPlayerBtn = document.getElementById('add-player-btn');
         const deletePlayerBtn = document.getElementById('delete-player-btn');
         const settingsBtn = document.getElementById('settings-btn');
+        const reportsBtn = document.getElementById('reports-btn');
         const modal = document.getElementById('edit-modal');
         const modalTitle = document.getElementById('modal-title');
         const editForm = document.getElementById('edit-form');
@@ -172,6 +205,13 @@
         const addYearBtn = document.getElementById('add-year-btn');
         const cancelSettingsBtn = document.getElementById('cancel-settings');
         const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const reportsModal = document.getElementById('reports-modal');
+        const cancelReportsBtn = document.getElementById('cancel-reports');
+        const reportYearSelect = document.getElementById('report-year-select');
+        const reportTypeSelect = document.getElementById('report-type-select');
+        const athleteSelectorContainer = document.getElementById('athlete-selector-container');
+        const reportAthleteSelect = document.getElementById('report-athlete-select');
+        const reportContent = document.getElementById('report-content');
 
         let appData = {};
         let injuryLog = {};
@@ -184,6 +224,8 @@
         async function initializeApp() {
             try {
                 logDebug("Initializing application...");
+                setupEventListeners(); // Setup listeners once
+                
                 appData = await fetchAppData();
                 if (!appData) throw new Error("Could not load app configuration.");
                 logDebug(`Loaded config for ${appData.athletes.length} athletes.`);
@@ -206,6 +248,8 @@
                         logDebug("Grid re-rendered with back-filled data.");
                     }
                 }
+                
+                logDebug("Application ready.");
             } catch (error) {
                 logDebug(`CRITICAL ERROR: ${error.message}`);
                 trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full text-center">A critical error occurred. Please check the console.</p>`;
@@ -458,24 +502,22 @@
 
         function setupEventListeners() {
             prevWeekBtn.addEventListener('click', () => {
-                const newDate = new Date(currentEndDate);
-                newDate.setDate(newDate.getDate() - 14);
-                currentEndDate = newDate;
+                currentEndDate.setDate(currentEndDate.getDate() - 14);
                 renderGrid();
             });
             nextWeekBtn.addEventListener('click', () => {
-                const newDate = new Date(currentEndDate);
-                newDate.setDate(newDate.getDate() + 14);
-                currentEndDate = newDate;
+                currentEndDate.setDate(currentEndDate.getDate() + 14);
                 renderGrid();
             });
             todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
             addPlayerBtn.addEventListener('click', handleAddPlayer);
             deletePlayerBtn.addEventListener('click', showDeletePlayerModal);
             settingsBtn.addEventListener('click', showSettingsModal);
+            reportsBtn.addEventListener('click', showReportsModal);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
             cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+            cancelReportsBtn.addEventListener('click', () => reportsModal.classList.add('hidden'));
             editForm.addEventListener('submit', handleFormSubmit);
             setAvailableBtn.addEventListener('click', handleSetAvailable);
             addYearBtn.addEventListener('click', handleAddYear);
@@ -483,6 +525,9 @@
             seasonsTabBtn.addEventListener('click', () => switchTab('seasons'));
             roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
             yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
+            reportYearSelect.addEventListener('change', generateReport);
+            reportTypeSelect.addEventListener('change', generateReport);
+            reportAthleteSelect.addEventListener('change', generateReport);
             roundsContainer.addEventListener('change', (e) => {
                 if (e.target.dataset.roundIndex === '0') {
                     autoFillRoundDates(e.target);
@@ -770,6 +815,117 @@
             }
         }
 
+        function showReportsModal() {
+            const years = [...new Set(appData.seasonPeriods.map(p => p.Year))].sort((a,b) => b - a);
+            reportYearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+            reportAthleteSelect.innerHTML = appData.athletes.map(a => `<option value="${a}">${a}</option>`).join('');
+            generateReport();
+            reportsModal.classList.remove('hidden');
+        }
+
+        function generateReport() {
+            const reportType = reportTypeSelect.value;
+            athleteSelectorContainer.classList.toggle('hidden', reportType !== 'athlete');
+            if (reportType === 'team') {
+                generateTeamSummary();
+            } else {
+                generateAthleteSummary();
+            }
+        }
+
+        function calculateStats(entries) {
+            const stats = { total: entries.length };
+            appData.statuses.forEach(status => {
+                stats[status] = entries.filter(e => e.status === status).length;
+            });
+            return stats;
+        }
+
+        function generateAthleteSummary() {
+            const year = reportYearSelect.value;
+            const athlete = reportAthleteSelect.value;
+            const athleteEntries = Object.entries(injuryLog)
+                .filter(([key]) => key.startsWith(`${athlete}-${year}`))
+                .map(([_, value]) => value);
+            
+            const stats = calculateStats(athleteEntries);
+
+            let html = `<h4 class="text-xl font-bold header-text mb-4">${athlete} - ${year} Summary</h4>`;
+            if (stats.total === 0) {
+                html += `<p class="secondary-text">No data available for this period.</p>`;
+                reportContent.innerHTML = html;
+                return;
+            }
+
+            html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">`;
+            Object.entries(stats).forEach(([status, count]) => {
+                const percentage = ((count / stats.total) * 100).toFixed(1);
+                html += `
+                    <div class="container-bg p-4 rounded-lg text-center">
+                        <p class="text-2xl font-bold header-text">${count}</p>
+                        <p class="secondary-text">${status} days (${percentage}%)</p>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            reportContent.innerHTML = html;
+        }
+
+        function generateTeamSummary() {
+            const year = reportYearSelect.value;
+            const teamEntries = Object.entries(injuryLog)
+                .filter(([key]) => key.includes(`-${year}-`))
+                .map(([_, value]) => value);
+
+            const stats = calculateStats(teamEntries);
+
+            let html = `<h4 class="text-xl font-bold header-text mb-4">Team Summary - ${year}</h4>`;
+            if (stats.total === 0) {
+                html += `<p class="secondary-text">No data available for this period.</p>`;
+                reportContent.innerHTML = html;
+                return;
+            }
+            
+            html += `<div class="mb-8"><h5 class="text-lg font-semibold header-text mb-2">Overall Availability</h5><div class="w-full container-bg rounded-lg p-4">`;
+            Object.entries(stats).forEach(([status, count]) => {
+                if (status === 'total') return;
+                const percentage = ((count / stats.total) * 100).toFixed(1);
+                const color = appData.colorMap[status] || '#4a5568';
+                html += `<div class="flex items-center mb-2"><div class="w-32 secondary-text">${status}</div><div class="flex-grow bg-gray-700 rounded-full h-6"><div class="chart-bar h-6" style="width: ${percentage}%; background-color: ${color};"><span class="font-bold">${percentage}%</span></div></div></div>`;
+            });
+            html += `</div></div>`;
+
+            const injuryEntries = teamEntries.filter(e => e.status !== 'Available' && e.status !== 'Pending');
+            html += generateBreakdownChart('Injury Location', injuryEntries, 'injurySite');
+            html += generateBreakdownChart('Injury Type', injuryEntries, 'injury');
+            html += generateBreakdownChart('Injury Severity', injuryEntries, 'severity');
+
+            reportContent.innerHTML = html;
+        }
+
+        function generateBreakdownChart(title, entries, property) {
+            const counts = entries.reduce((acc, entry) => {
+                const value = entry[property];
+                if (value) {
+                    acc[value] = (acc[value] || 0) + 1;
+                }
+                return acc;
+            }, {});
+
+            if (Object.keys(counts).length === 0) return '';
+
+            const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+            const maxCount = sorted[0][1];
+
+            let chartHtml = `<div class="mb-8"><h5 class="text-lg font-semibold header-text mb-2">${title}</h5><div class="w-full container-bg rounded-lg p-4">`;
+            sorted.forEach(([item, count]) => {
+                const percentage = ((count / maxCount) * 100);
+                chartHtml += `<div class="flex items-center mb-2"><div class="w-40 secondary-text truncate">${item}</div><div class="flex-grow bg-gray-700 rounded-full h-6"><div class="chart-bar h-6" style="width: ${percentage}%;"><span class="font-bold">${count}</span></div></div></div>`;
+            });
+            chartHtml += `</div></div>`;
+            return chartHtml;
+        }
+
         function toYYYYMMDD(date) { return new Date(date).toISOString().split('T')[0]; }
         function formatDateHeader(date) { const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; return `${days[date.getDay()]}<br>${date.getDate()}`; }
         function formatDateDisplay(date) { return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
@@ -782,48 +938,10 @@
             });
         }
         
-        // This is the one-time setup for all static event listeners
-        function setupStaticEventListeners() {
-            prevWeekBtn.addEventListener('click', () => {
-                currentEndDate.setDate(currentEndDate.getDate() - 14);
-                renderGrid();
-            });
-            nextWeekBtn.addEventListener('click', () => {
-                currentEndDate.setDate(currentEndDate.getDate() + 14);
-                renderGrid();
-            });
-            todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
-            addPlayerBtn.addEventListener('click', handleAddPlayer);
-            deletePlayerBtn.addEventListener('click', showDeletePlayerModal);
-            settingsBtn.addEventListener('click', showSettingsModal);
-            cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
-            cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-            editForm.addEventListener('submit', handleFormSubmit);
-            setAvailableBtn.addEventListener('click', handleSetAvailable);
-            addYearBtn.addEventListener('click', handleAddYear);
-            saveSettingsBtn.addEventListener('click', handleSaveSettings);
-            seasonsTabBtn.addEventListener('click', () => switchTab('seasons'));
-            roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
-            yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
-            roundsContainer.addEventListener('change', (e) => {
-                if (e.target.dataset.roundIndex === '0') {
-                    autoFillRoundDates(e.target);
-                }
-            });
-            document.addEventListener('input', e => {
-                if (e.target.id === 'regular-rounds-input') updateRegularRoundsList();
-                if (e.target.type === 'checkbox' && e.target.id.startsWith('check-')) {
-                    e.target.nextElementSibling.nextElementSibling.disabled = !e.target.checked;
-                }
-            });
-        }
-
-        // Run the initialization
+        setupEventListeners();
         initializeApp();
-        // Set up static listeners once
-        setupStaticEventListeners();
     });
     </script>
 </body>
 </html>
+
