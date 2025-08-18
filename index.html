@@ -890,7 +890,7 @@
             
             let athleteEntries = [];
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                if (d > new Date()) break; // Don't project into the future
+                if (d > new Date()) break;
                 athleteEntries.push(getStatusForDate(athlete, new Date(d)));
             }
             
