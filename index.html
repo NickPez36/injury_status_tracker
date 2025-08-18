@@ -6,6 +6,8 @@
     <title>Athlete Injury Status Tracker</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Netlify Identity Widget -->
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <style>
         body { background-color: #1a202c; color: #e2e8f0; }
         .container-bg { background-color: #2d3748; }
@@ -21,7 +23,7 @@
             height: 50px;
             transition: transform 0.2s ease, box-shadow 0.2s ease; 
         }
-        .status-box:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .status-box.editable:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; }
         .modal-content { background-color: #2d3748; }
         .input-field { background-color: #1a202c; border-color: #4a5568; color: #e2e8f0; }
         .input-field:focus { border-color: #718096; ring-color: #718096; }
@@ -40,10 +42,21 @@
 </head>
 <body class="font-sans">
 
-    <div class="container mx-auto p-2 sm:p-4">
+    <!-- Login Section -->
+    <div id="login-container" class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <h1 class="text-4xl font-bold header-text mb-4">Athlete Tracker</h1>
+            <p class="secondary-text mb-8">Please log in to continue.</p>
+            <div data-netlify-identity-button></div>
+        </div>
+    </div>
+
+    <!-- Main App Container (hidden by default) -->
+    <div id="app-container" class="hidden container mx-auto p-2 sm:p-4">
         <header class="text-center my-6 relative">
             <h1 class="text-3xl sm:text-4xl font-bold header-text">Athlete Injury Status Tracker</h1>
-            <div class="absolute top-0 right-0 flex space-x-2">
+            <div class="absolute top-0 right-0 flex space-x-2 items-center">
+                <div id="user-info" class="flex items-center space-x-2"></div>
                 <button id="reports-btn" class="px-4 py-2 button-primary rounded-lg shadow">Reports</button>
                 <button id="settings-btn" class="px-4 py-2 button-primary rounded-lg shadow">Settings</button>
             </div>
@@ -184,6 +197,9 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const appContainer = document.getElementById('app-container');
+        const loginContainer = document.getElementById('login-container');
+        const userInfo = document.getElementById('user-info');
         const trackerGrid = document.getElementById('tracker-grid');
         const dateRangeEl = document.getElementById('date-range');
         const prevWeekBtn = document.getElementById('prev-week');
@@ -228,6 +244,8 @@
         let appData = {};
         let injuryLog = {};
         let currentEndDate = new Date();
+        let currentUser = null;
+        let userRoles = [];
         const seasonStartDate = new Date('2025-01-01T00:00:00');
         const isLocal = window.location.protocol === 'blob:';
         
@@ -236,7 +254,6 @@
         async function initializeApp() {
             try {
                 logDebug("Initializing application...");
-                setupEventListeners();
                 
                 appData = await fetchAppData();
                 if (!appData) throw new Error("Could not load app configuration.");
@@ -261,6 +278,7 @@
                     }
                 }
                 
+                updateUIVisibility();
                 logDebug("Application ready.");
             } catch (error) {
                 logDebug(`CRITICAL ERROR: ${error.message}`);
@@ -270,7 +288,7 @@
 
         async function fetchAppData() {
             try {
-                const response = await fetch('/.netlify/functions/injury-log?config=true');
+                const response = await fetch('/.netlify/functions/injury-log?config=true', { headers: { Authorization: `Bearer ${currentUser.token.access_token}` } });
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return await response.json();
             } catch (error) {
@@ -282,7 +300,7 @@
 
         async function fetchInjuryLog() {
             try {
-                const response = await fetch('/.netlify/functions/injury-log');
+                const response = await fetch('/.netlify/functions/injury-log', { headers: { Authorization: `Bearer ${currentUser.token.access_token}` } });
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return await response.json();
             } catch (error) {
@@ -321,7 +339,7 @@
         async function postData(endpoint, body) {
             if (isLocal) { alert("This action is disabled in the local preview."); return null; }
             try {
-                const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token.access_token}` }, body: JSON.stringify(body) });
                 if (!response.ok) { const err = await response.json(); throw new Error(err.error || `HTTP error! status: ${response.status}`); }
                 return await response.json();
             } catch (error) {
@@ -598,6 +616,7 @@
         });
 
         function handleBoxDoubleClick(e) {
+            if (!userRoles.includes('physio')) return;
             const box = e.target;
             if (!box.dataset.status) return;
             const statusData = JSON.parse(box.dataset.status);
@@ -832,8 +851,7 @@
 
             if (seasonResult && roundResult) {
                 settingsModal.classList.add('hidden');
-                appData = await fetchAppData();
-                renderGrid();
+                await initializeApp();
             }
         }
 
