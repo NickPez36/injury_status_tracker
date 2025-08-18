@@ -224,7 +224,6 @@
         async function initializeApp() {
             try {
                 logDebug("Initializing application...");
-                setupEventListeners();
                 
                 appData = await fetchAppData();
                 if (!appData) throw new Error("Could not load app configuration.");
@@ -250,7 +249,7 @@
                 }
                 
                 logDebug("Application ready.");
-            } catch (error) {
+            } catch (error)
                 logDebug(`CRITICAL ERROR: ${error.message}`);
                 trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full text-center">A critical error occurred. Please check the console.</p>`;
             }
