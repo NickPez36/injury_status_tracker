@@ -224,7 +224,7 @@
         async function initializeApp() {
             try {
                 logDebug("Initializing application...");
-                setupEventListeners(); // Setup listeners once
+                setupEventListeners();
                 
                 appData = await fetchAppData();
                 if (!appData) throw new Error("Could not load app configuration.");
@@ -816,8 +816,8 @@
         }
 
         function showReportsModal() {
-            const years = [...new Set(appData.seasonPeriods.map(p => p.Year))].sort((a,b) => b - a);
-            reportYearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+            const yearsWithData = [...new Set(Object.keys(injuryLog).map(key => key.split('-')[1]))].sort((a,b) => b - a);
+            reportYearSelect.innerHTML = yearsWithData.map(y => `<option value="${y}">${y}</option>`).join('');
             reportAthleteSelect.innerHTML = appData.athletes.map(a => `<option value="${a}">${a}</option>`).join('');
             generateReport();
             reportsModal.classList.remove('hidden');
@@ -938,10 +938,8 @@
             });
         }
         
-        setupEventListeners();
         initializeApp();
     });
     </script>
 </body>
 </html>
-
