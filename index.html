@@ -25,7 +25,7 @@
         .modal-content { background-color: #2d3748; }
         .input-field { background-color: #1a202c; border-color: #4a5568; color: #e2e8f0; }
         .input-field:focus { border-color: #718096; ring-color: #718096; }
-        .settings-date-input { width: 100%; padding: 8px; min-width: 160px; }
+        .settings-date-input { width: 100%; padding: 8px; min-width: 170px; }
         #tooltip { background-color: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; z-index: 110; white-space: pre-wrap; max-width: 250px; }
         #tracker-grid { display: grid; grid-template-columns: 120px repeat(14, minmax(40px, 1fr)); gap: 1px; background-color: #4a5568; }
         #debug-panel { display: none; }
@@ -108,7 +108,7 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
-        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-4xl">
+        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-5xl">
             <h3 class="text-2xl font-bold mb-4 header-text">Settings</h3>
             <div class="flex border-b border-gray-600 mb-4">
                 <button id="seasons-tab-btn" class="tab-button active">Seasons</button>
@@ -206,9 +206,6 @@
                         logDebug("Grid re-rendered with back-filled data.");
                     }
                 }
-                
-                setupEventListeners();
-                logDebug("Event listeners are set up. Application ready.");
             } catch (error) {
                 logDebug(`CRITICAL ERROR: ${error.message}`);
                 trackerGrid.innerHTML = `<p class="text-red-400 p-4 col-span-full text-center">A critical error occurred. Please check the console.</p>`;
