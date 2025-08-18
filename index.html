@@ -50,10 +50,6 @@
         </header>
 
         <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
-            <div class="flex space-x-2 w-full sm:w-auto">
-                <button id="add-player-btn" class="w-1/2 sm:w-auto px-4 py-2 button-primary rounded-lg shadow">Add Player</button>
-                <button id="delete-player-btn" class="w-1/2 sm:w-auto px-4 py-2 bg-red-800 text-white rounded-lg shadow hover:bg-red-700">Delete Player</button>
-            </div>
             <div class="flex-grow flex justify-center items-center space-x-2">
                 <button id="prev-week" class="px-4 py-2 button-primary rounded-lg shadow">&lt;</button>
                 <h2 id="date-range" class="text-lg sm:text-xl font-semibold text-center header-text w-48 sm:w-64"></h2>
@@ -98,18 +94,6 @@
         </div>
     </div>
 
-    <!-- Delete Player Modal -->
-    <div id="delete-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
-        <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-md">
-            <h3 class="text-2xl font-bold mb-4 header-text">Delete Player</h3>
-            <p class="secondary-text mb-4">Select a player to permanently delete them and all their associated data. This action cannot be undone.</p>
-            <div id="delete-player-list" class="space-y-2 max-h-64 overflow-y-auto mb-6"></div>
-            <div class="flex justify-end">
-                <button type="button" id="cancel-delete" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Cancel</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4">
         <div class="modal-content rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-5xl">
@@ -117,6 +101,7 @@
             <div class="flex border-b border-gray-600 mb-4">
                 <button id="seasons-tab-btn" class="tab-button active">Seasons</button>
                 <button id="rounds-tab-btn" class="tab-button">Rounds</button>
+                <button id="players-tab-btn" class="tab-button">Players</button>
             </div>
             <!-- Seasons Tab -->
             <div id="seasons-tab-content">
@@ -132,6 +117,23 @@
                     <select id="year-select" class="input-field p-2 rounded"></select>
                 </div>
                 <div id="rounds-container" class="space-y-2 max-h-80 overflow-y-auto"></div>
+            </div>
+            <!-- Players Tab -->
+            <div id="players-tab-content" class="hidden">
+                 <p class="secondary-text mb-4">Manage the player roster. Changes will be reflected in the main grid.</p>
+                 <div class="flex space-x-4">
+                    <div class="w-1/2">
+                        <h4 class="text-lg font-semibold header-text mb-2">Add New Player</h4>
+                        <div class="flex space-x-2">
+                            <input type="text" id="new-player-name" placeholder="Enter full name" class="input-field w-full p-2 rounded">
+                            <button id="add-player-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Add</button>
+                        </div>
+                    </div>
+                    <div class="w-1/2">
+                        <h4 class="text-lg font-semibold header-text mb-2">Delete Player</h4>
+                        <div id="delete-player-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                 </div>
             </div>
             <div class="flex justify-end items-center mt-6">
                 <button type="button" id="cancel-settings" class="px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-700">Cancel</button>
@@ -178,8 +180,6 @@
         const prevWeekBtn = document.getElementById('prev-week');
         const nextWeekBtn = document.getElementById('next-week');
         const todayBtn = document.getElementById('today-btn');
-        const addPlayerBtn = document.getElementById('add-player-btn');
-        const deletePlayerBtn = document.getElementById('delete-player-btn');
         const settingsBtn = document.getElementById('settings-btn');
         const reportsBtn = document.getElementById('reports-btn');
         const modal = document.getElementById('edit-modal');
@@ -189,22 +189,24 @@
         const setAvailableBtn = document.getElementById('set-available-btn');
         const tooltip = document.getElementById('tooltip');
         const debugPanel = document.getElementById('debug-panel');
-        const deleteModal = document.getElementById('delete-modal');
         const deletePlayerList = document.getElementById('delete-player-list');
-        const cancelDeleteBtn = document.getElementById('cancel-delete');
         const seasonTimeline = document.getElementById('season-timeline');
         const roundsTimeline = document.getElementById('rounds-timeline');
         const settingsModal = document.getElementById('settings-modal');
         const seasonsTabBtn = document.getElementById('seasons-tab-btn');
         const roundsTabBtn = document.getElementById('rounds-tab-btn');
+        const playersTabBtn = document.getElementById('players-tab-btn');
         const seasonsTabContent = document.getElementById('seasons-tab-content');
         const roundsTabContent = document.getElementById('rounds-tab-content');
+        const playersTabContent = document.getElementById('players-tab-content');
         const seasonDatesContainer = document.getElementById('season-dates-container');
         const roundsContainer = document.getElementById('rounds-container');
         const yearSelect = document.getElementById('year-select');
         const addYearBtn = document.getElementById('add-year-btn');
         const cancelSettingsBtn = document.getElementById('cancel-settings');
         const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const addPlayerBtn = document.getElementById('add-player-btn');
+        const newPlayerNameInput = document.getElementById('new-player-name');
         const reportsModal = document.getElementById('reports-modal');
         const cancelReportsBtn = document.getElementById('cancel-reports');
         const reportYearSelect = document.getElementById('report-year-select');
@@ -509,12 +511,9 @@
                 renderGrid();
             });
             todayBtn.addEventListener('click', () => { currentEndDate = new Date(); renderGrid(); });
-            addPlayerBtn.addEventListener('click', handleAddPlayer);
-            deletePlayerBtn.addEventListener('click', showDeletePlayerModal);
             settingsBtn.addEventListener('click', showSettingsModal);
             reportsBtn.addEventListener('click', showReportsModal);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
             cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
             cancelReportsBtn.addEventListener('click', () => reportsModal.classList.add('hidden'));
             editForm.addEventListener('submit', handleFormSubmit);
@@ -523,6 +522,7 @@
             saveSettingsBtn.addEventListener('click', handleSaveSettings);
             seasonsTabBtn.addEventListener('click', () => switchTab('seasons'));
             roundsTabBtn.addEventListener('click', () => switchTab('rounds'));
+            playersTabBtn.addEventListener('click', () => switchTab('players'));
             yearSelect.addEventListener('change', () => populateRoundsEditor(yearSelect.value));
             reportYearSelect.addEventListener('change', generateReport);
             reportTypeSelect.addEventListener('change', generateReport);
@@ -538,6 +538,7 @@
                     e.target.nextElementSibling.nextElementSibling.disabled = !e.target.checked;
                 }
             });
+            addPlayerBtn.addEventListener('click', handleAddPlayer);
         }
 
         function addBoxEventListeners() {
@@ -550,14 +551,18 @@
         }
 
         async function handleAddPlayer() {
-            const newName = prompt("Enter the new player's full name:");
+            const newName = newPlayerNameInput.value;
             if (newName && newName.trim()) {
                 const result = await postData('/.netlify/functions/injury-log', { action: 'addPlayer', name: newName.trim() });
-                if (result) await initializeApp();
+                if (result) {
+                    newPlayerNameInput.value = '';
+                    await initializeApp();
+                    showSettingsModal('players');
+                }
             }
         }
 
-        function showDeletePlayerModal() {
+        function showDeletePlayerList() {
             deletePlayerList.innerHTML = '';
             appData.athletes.forEach(name => {
                 const playerDiv = document.createElement('div');
@@ -565,7 +570,6 @@
                 playerDiv.innerHTML = `<span>${name}</span><button data-name="${name}" class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-500 delete-confirm-btn">Delete</button>`;
                 deletePlayerList.appendChild(playerDiv);
             });
-            deleteModal.classList.remove('hidden');
         }
         
         document.addEventListener('click', async (e) => {
@@ -574,8 +578,8 @@
                 if (confirm(`Are you sure you want to permanently delete ${nameToDelete}? This cannot be undone.`)) {
                     const result = await postData('/.netlify/functions/injury-log', { action: 'deletePlayer', name: nameToDelete });
                     if (result) {
-                        deleteModal.classList.add('hidden');
                         await initializeApp();
+                        showSettingsModal('players');
                     }
                 }
             }
@@ -658,20 +662,22 @@
         }
 
         function switchTab(activeTab) {
+            [seasonsTabBtn, roundsTabBtn, playersTabBtn].forEach(btn => btn.classList.remove('active'));
+            [seasonsTabContent, roundsTabContent, playersTabContent].forEach(content => content.classList.add('hidden'));
+
             if (activeTab === 'seasons') {
                 seasonsTabBtn.classList.add('active');
-                roundsTabBtn.classList.remove('active');
                 seasonsTabContent.classList.remove('hidden');
-                roundsTabContent.classList.add('hidden');
-            } else {
-                seasonsTabBtn.classList.remove('active');
+            } else if (activeTab === 'rounds') {
                 roundsTabBtn.classList.add('active');
-                seasonsTabContent.classList.add('hidden');
                 roundsTabContent.classList.remove('hidden');
+            } else if (activeTab === 'players') {
+                playersTabBtn.classList.add('active');
+                playersTabContent.classList.remove('hidden');
             }
         }
 
-        function showSettingsModal() {
+        function showSettingsModal(defaultTab = 'seasons') {
             // Seasons Tab
             seasonDatesContainer.innerHTML = '';
             const seasonsByYear = appData.seasonPeriods.reduce((acc, period) => {
@@ -706,7 +712,11 @@
             yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
             yearSelect.value = new Date().getFullYear();
             populateRoundsEditor(yearSelect.value);
+            
+            // Players Tab
+            showDeletePlayerList();
 
+            switchTab(defaultTab);
             settingsModal.classList.remove('hidden');
         }
         
@@ -810,7 +820,8 @@
 
             if (seasonResult && roundResult) {
                 settingsModal.classList.add('hidden');
-                await initializeApp();
+                appData = await fetchAppData();
+                renderGrid();
             }
         }
 
@@ -858,7 +869,7 @@
 
             html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">`;
             Object.entries(stats).forEach(([status, count]) => {
-                const percentage = ((count / stats.total) * 100).toFixed(1);
+                const percentage = stats.total > 0 ? ((count / stats.total) * 100).toFixed(1) : 0;
                 html += `
                     <div class="container-bg p-4 rounded-lg text-center">
                         <p class="text-2xl font-bold header-text">${count}</p>
@@ -888,7 +899,7 @@
             html += `<div class="mb-8"><h5 class="text-lg font-semibold header-text mb-2">Overall Availability</h5><div class="w-full container-bg rounded-lg p-4">`;
             Object.entries(stats).forEach(([status, count]) => {
                 if (status === 'total') return;
-                const percentage = ((count / stats.total) * 100).toFixed(1);
+                const percentage = stats.total > 0 ? ((count / stats.total) * 100).toFixed(1) : 0;
                 const color = appData.colorMap[status] || '#4a5568';
                 html += `<div class="flex items-center mb-2"><div class="w-32 secondary-text">${status}</div><div class="flex-grow bg-gray-700 rounded-full h-6"><div class="chart-bar h-6" style="width: ${percentage}%; background-color: ${color};"><span class="font-bold">${percentage}%</span></div></div></div>`;
             });
